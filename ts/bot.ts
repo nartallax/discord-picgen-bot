@@ -1,34 +1,39 @@
-import {makeCommands} from "bot_commands"
+import {commands} from "bot_commands"
 import {BotError} from "bot_error"
+import {AppContext} from "context"
 import * as Discord from "discord.js"
-import {Config} from "types"
+import {errToString} from "utils"
 
-type InteractionHandler = (interaction: Discord.ChatInputCommandInteraction<Discord.CacheType>) => (void | Promise<void>)
+export type DefaultInteraction = Discord.ChatInputCommandInteraction<Discord.CacheType>
+export type InteractionHandler = (interaction: DefaultInteraction, context: AppContext) => (void | Promise<void>)
 
 type SimpleCommandArr = [string, string, InteractionHandler]
 type ComplexCommandArr = [ReturnType<Discord.SlashCommandBuilder["toJSON"]>, InteractionHandler]
-type CommandArr = SimpleCommandArr | ComplexCommandArr
+export type CommandArr = SimpleCommandArr | ComplexCommandArr
 
 function isSimpleCommandArr(x: CommandArr): x is SimpleCommandArr {
 	return typeof(x[0]) === "string"
 }
 
-
 export class Bot {
 
 	private readonly client: Discord.Client
 	private readonly rest: Discord.REST
-	private readonly commands: readonly CommandArr[]
 
-	constructor(readonly config: Config, readonly token: string) {
+	getTextChannel(id: string): Discord.TextBasedChannel {
+		const channel = this.client.channels.cache.get(id)
+		if(!channel || !channel.isTextBased()){
+			throw new Error("Discord channel " + id + " is not accessible for bot, or is not text-based channel.")
+		}
+		return channel
+	}
+
+	constructor(readonly context: AppContext, readonly token: string) {
 		this.client = new Discord.Client({
 			intents: [
-				Discord.GatewayIntentBits.Guilds,
-				Discord.GatewayIntentBits.MessageContent
+				Discord.GatewayIntentBits.Guilds
 			]
 		})
-
-		this.commands = makeCommands(config)
 
 		this.rest = new Discord.REST({
 			version: "10"
@@ -37,7 +42,7 @@ export class Bot {
 
 	async start(): Promise<void> {
 		await this.login()
-		const cmdObjects = this.commands.map(cmdArr => {
+		const cmdObjects = commands.map(cmdArr => {
 			if(isSimpleCommandArr(cmdArr)){
 				return new Discord.SlashCommandBuilder()
 					.setName(cmdArr[0])
@@ -47,7 +52,7 @@ export class Bot {
 			return cmdArr[0]
 		})
 		await this.rest.put(
-			Discord.Routes.applicationGuildCommands(this.config.clientID, this.config.guildID),
+			Discord.Routes.applicationGuildCommands(this.context.config.clientID, this.context.config.guildID),
 			{body: cmdObjects}
 		)
 		this.listen()
@@ -67,7 +72,7 @@ export class Bot {
 				return
 			}
 
-			const cmdArr = this.commands.find(x =>
+			const cmdArr = commands.find(x =>
 				(isSimpleCommandArr(x) ? x[0] : x[0].name) === interaction.commandName
 			)
 			if(!cmdArr){
@@ -76,16 +81,33 @@ export class Bot {
 			}
 			const commandAction = isSimpleCommandArr(cmdArr) ? cmdArr[2] : cmdArr[1]
 			try {
-				await Promise.resolve(commandAction(interaction))
+				await Promise.resolve(commandAction(interaction, this.context))
 			} catch(e){
+				let msg: string
 				if(e instanceof BotError){
-					interaction.reply(e.message)
+					msg = e.message
 				} else {
-					interaction.reply("Oh noes! Something failed UwU! We awe sowwy. Go look into logs.")
-					console.error(e instanceof Error ? e.stack || e.message : e + "")
+					msg = "Oh noes! Something failed UwU! We awe sowwy. Go look into logs."
+					console.error(errToString(e))
 				}
+
+				this.reportError(msg, interaction.channelId, interaction)
 			}
 		})
+	}
+
+	reportError(errorMsg: string, channelId: string, interaction?: DefaultInteraction): void {
+		try {
+			if(interaction && !interaction.replied){
+				interaction.reply(errorMsg)
+			} else {
+				const channel = interaction?.channel || this.getTextChannel(channelId)
+				channel.send(errorMsg)
+			}
+		} catch(e){
+			console.error("Failed to report error " + errorMsg)
+			console.error("Because of " + (e instanceof Error ? e.stack || e.message : e + ""))
+		}
 	}
 
 }

@@ -15,3 +15,7 @@ export function* grouped<T>(values: T[], groupSize: number): IterableIterator<T[
 		yield group
 	}
 }
+
+export function errToString(err: unknown): string {
+	return err instanceof Error ? err.stack || err.message : err + ""
+}

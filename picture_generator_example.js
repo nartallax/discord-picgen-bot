@@ -17,20 +17,23 @@ async function main() {
 	// stderr logs can be seen in bot's own stderr
 	process.stderr.write("Got parameters! " + JSON.stringify(parameters) + "\n")
 
-	// sleep for 5 seconds
-	// implying some generation is going on, it's a slow process, give it some time
-	await new Promise(ok => setTimeout(ok, 5000))
+	// we will generate 6 pictures
+	for(let i = 0; i < 6; i++){
+		// sleep for 5 seconds
+		// implying some generation is going on, it's a slow process, give it some time
+		await new Promise(ok => setTimeout(ok, 5000))
 
-	// now let's generate a file!
-	// it will actually be the same file every time
-	// that we put in the same location every time
-	const filePath = "./resulting_picture_example.png"
-	// so, we put some data into file
-	await Fs.promises.writeFile(filePath, Buffer.from(myPictureBase64, "base64"))
-	// and then emit JSON into stdout, saying "hey, we just generated a file!"
-	// note newline at the end of the string
-	// bot expects that each new JSON will be on the next line
-	process.stdout.write(JSON.stringify({generatedPicture: filePath}) + "\n")
+		// now let's generate a file!
+		// it will actually be the same file every time
+		// that we put in the same location every time
+		const filePath = "./resulting_picture_example.png"
+		// so, we put some data into file
+		await Fs.promises.writeFile(filePath, Buffer.from(myPictureBase64, "base64"))
+		// and then emit JSON into stdout, saying "hey, we just generated a file!"
+		// note newline at the end of the string
+		// bot expects that each new JSON will be on the next line
+		process.stdout.write(JSON.stringify({generatedPicture: filePath}) + "\n")
+	}
 
 	// everything is fine! let's exit normally, with exit code 0
 	process.exit(0)

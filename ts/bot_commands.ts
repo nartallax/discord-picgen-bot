@@ -1,104 +1,132 @@
+import {CommandArr} from "bot"
 import * as Discord from "discord.js"
-import {promises as Fs} from "fs"
-import {GenParamParser} from "generation_input"
-import {GenRunner} from "gen_runner"
-import {Config} from "types"
-import * as Path from "path"
-import {grouped, isEnoent} from "utils"
+import {genInputToString} from "input_parser"
 
-type InteractionHandler = (interaction: Discord.ChatInputCommandInteraction<Discord.CacheType>) => (void | Promise<void>)
+export const commands: readonly CommandArr[] = [
 
-type SimpleCommandArr = [string, string, InteractionHandler]
-type ComplexCommandArr = [ReturnType<Discord.SlashCommandBuilder["toJSON"]>, InteractionHandler]
-type CommandArr = SimpleCommandArr | ComplexCommandArr
+	[
+		"lenny", // just for lulz
+		"( ͡° ͜ʖ ͡°)",
+		interaction => {
+			interaction.reply("( ͡° ͜ʖ ͡°)")
+		}
+	],
 
-const maxAttachmentsPerMessage = 10
+	[
+		"dreamhelp",
+		"Displays help about /dream command",
+		(interaction, context) => {
+			let str = context.cmdParser.makeHelpStr()
+			const header = context.config.helpHeader || "Usage: /dream prompt [params]"
+			str = header + "\n\n" + str
+			interaction.reply("```\n" + str + "\n```")
+		}
+	],
 
-export function makeCommands(config: Config): CommandArr[] {
-	const cmdParser = new GenParamParser(config.params)
-	const genRunner = new GenRunner(config.commandTemplate)
-
-	return [
-
-		[
-			"lenny", // just for lulz
-			"( ͡° ͜ʖ ͡°)",
-			interaction => {
-				interaction.reply("( ͡° ͜ʖ ͡°)")
+	[
+		new Discord.SlashCommandBuilder()
+			.setName("dream")
+			.setDescription("Generate a picture by parameters")
+			.addStringOption(opt => opt.setName("params")
+				.setDescription("A string with a prompt and other parameters")
+				.setRequired(true)
+			)
+			.toJSON(),
+		(interaction, context) => {
+			const paramsStr = interaction.options.get("params")?.value
+			if(typeof(paramsStr) !== "string"){
+				interaction.reply("Hey, where's parameters? I need them to generate anything, y'know.")
+				return
 			}
-		],
+			const input = context.cmdParser.parse(paramsStr, interaction)
+			interaction.reply("Got new task: " + genInputToString(input, context.config))
+			context.queue.put(input)
+		}
+	],
 
-		[
-			"dreamhelp",
-			"Displays help about /dream command",
-			interaction => {
-				let str = cmdParser.makeHelpStr()
-				str = "Usage: /dream prompt [params]\n\n" + str
-				interaction.reply("```\n" + str + "\n```")
+	[
+		"status",
+		"Display generation queue and currently processed task",
+		(interaction, context) => {
+			let result = ""
+			const runningState = context.runner.describeCurrentTask()
+			if(runningState){
+				result += "Running:\n" + runningState + "\n\n"
 			}
-		],
 
-		[
-			new Discord.SlashCommandBuilder()
-				.setName("dream")
-				.setDescription("Generate a picture by parameters")
-				.addStringOption(opt => opt.setName("params").setDescription("A string with a prompt and other parameters"))
-				.toJSON(),
-			async interaction => {
-				const paramsStr = interaction.options.get("params")?.value
-				if(typeof(paramsStr) !== "string"){
-					interaction.reply("Hey, where's parameters? I need them to generate anything, y'know.")
-					return
-				}
-				const input = cmdParser.parse(paramsStr)
-				const taskPromise = genRunner.run(input)
-				interaction.reply("Started!")
-				const task = await taskPromise
-				if(task.exitCode !== 0){
-					const errors = task.errors.join("\n") || "<no errors passed from generator>"
-					interaction.channel?.send("Generation completed with errors:\n\n" + errors)
-				} else {
-					const notFoundFiles = [] as string[]
-					const errors = [] as string[]
-
-					const attachments = (await Promise.all(task.outputFiles.map(async filePath => {
-						let content: Buffer
-						try {
-							content = await Fs.readFile(filePath)
-						} catch(e){
-							if(isEnoent(e)){
-								notFoundFiles.push(filePath)
-							} else {
-								errors.push(e + "")
-							}
-							return null
-						}
-
-						return new Discord.AttachmentBuilder(content, {
-							name: Path.basename(filePath)
-						})
-					}))).filter(x => !!x) as Discord.AttachmentBuilder[]
-
-					let msgText = "Generation finished!"
-					if(task.outputFiles.length === 0){
-						msgText += "\n\nNo files generated."
-					}
-					if(notFoundFiles.length > 0){
-						msgText += "\n\nSome of resulting files are not found: " + notFoundFiles.join(", ")
-					}
-					if(errors.length > 0){
-						msgText += "\n\nSome of resulting files can not be red: " + errors.join(", ")
-					}
-
-					for(const attachmentGroup of grouped(attachments, maxAttachmentsPerMessage)){
-						interaction.channel?.send({
-							content: msgText,
-							files: attachmentGroup
-						})
-						msgText = ""
-					}
-				}
+			const queueState = context.queue.showItems()
+			if(queueState){
+				result += "Queued:\n" + queueState
 			}
-		]
+
+			if(!result){
+				result = "Nothing going on!"
+			}
+
+			interaction.reply(result)
+		}
+	],
+
+	[
+		new Discord.SlashCommandBuilder()
+			.setName("drop")
+			.setDescription("Drop a specific task by its ID")
+			.addNumberOption(opt => opt.setName("task_id")
+				.setDescription("ID of task to be dropped")
+				.setRequired(true)
+			)
+			.toJSON(),
+		(interaction, context) => {
+			const taskId = interaction.options.get("task_id")?.value
+			if(typeof(taskId) !== "number" || !taskId || Number.isNaN(taskId)){
+				interaction.reply("Hey, gimme a task ID! What task should I drop?")
+				return
+			}
+			if(context.runner.currentRunningTask?.input.id === taskId){
+				context.runner.killCurrentTask()
+				interaction.reply(`Task #${taskId} was the current running task. Stopped.`)
+				return
+			}
+			if(context.queue.drop(taskId)){
+				interaction.reply(`Removed task #${taskId} from the queue.`)
+				return
+			}
+			interaction.reply(`Could not find task #${taskId} anywhere. You sure you're not mistaken?`)
+		}
+	],
+
+	[
+		"purge",
+		"Stop current generation and clear the queue",
+		(interaction, context) => {
+			context.queue.clear()
+			if(context.runner.currentRunningTask){
+				context.runner.killCurrentTask()
+			}
+			interaction.reply("Purged! :fire:")
+		}
+	],
+
+	[
+		"clear",
+		"Clear the queue without stopping current generation",
+		(interaction, context) => {
+			context.queue.clear()
+			interaction.reply("Cleared! :soap:")
+		}
+	],
+
+	[
+		"kill",
+		"Interrupt currently running task",
+		(interaction, context) => {
+			if(context.runner.currentRunningTask){
+				context.runner.killCurrentTask()
+				interaction.reply("Killed! :knife:")
+			} else {
+				interaction.reply("No task is running, what do you want from me, weird human?")
+			}
+
+		}
 	]
-}
+]

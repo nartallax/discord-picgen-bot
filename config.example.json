@@ -2,22 +2,27 @@
 	"clientID": "469771750285115392",
 	"guildID": "581216905654960129",
 	"commandTemplate": "node picture_generator_example.js $INPUT_JSON",
+	"promptCutoffLimitInDisplay": 50,
+	"helpHeader": "Usage: /dream prompt [params]",
 	"params": [{
 		"key": ["--height", "-H"],
 		"jsonName": "height",
 		"type": "int",
+		"humanName": "Height",
 		"description": "height of the image",
 		"default": 512
 	}, {
 		"key": ["--width", "-W"],
 		"jsonName": "width",
 		"type": "int",
+		"humanName": "Width",
 		"description": "width of the image",
 		"default": 512
 	}, {
 		"key": ["--cfg_scale", "-C"],
 		"jsonName": "scale",
 		"type": "float",
+		"humanName": "Scale",
 		"description": "CFG scale factor",
 		"default": 7
 	}, {
@@ -25,51 +30,60 @@
 		"jsonName": "number",
 		"type": "int",
 		"default": 1,
+		"humanName": "Number",
 		"description": "number of images"
 	}, {
 		"key": ["--separate-images", "-i"],
 		"jsonName": "separateImages",
 		"type": "bool",
+		"humanName": "Separate images",
 		"description": "returns multiple images as separate files"
 	}, {
 		"key": ["--grid", "-g"],
 		"jsonName": "grid",
 		"type": "bool",
+		"humanName": "Grid",
 		"description": "composite multiple images into grid"
 	}, {
 		"key": ["--sampler", "-A"],
 		"jsonName": "sampler",
 		"type": "enum",
 		"default": "k_lms",
+		"humanName": "Sampler",
 		"allowedValues": ["k_lms", "ddim", "plms", "k_euler", "k_euler_ancestral", "k_neun", "k_dpm_2", "k_dpm_2_ancestral"]
 	}, {
 		"key": ["--steps", "-s"],
 		"jsonName": "steps",
 		"type": "int",
 		"default": 50,
+		"humanName": "Steps",
 		"description": "number of steps"
 	}, {
 		"key": ["--seed", "-S"],
 		"jsonName": "seed",
 		"type": "string",
 		"default": "",
+		"humanName": "Seed",
 		"description": "random seed to use"
 	}, {
 		"key": ["--prior", "-p"],
 		"jsonName": "prior",
 		"type": "string",
 		"default": "",
+		"humanName": "Prior",
 		"description": "vector_adjust_prior"
 	}, {
 		"key": ["--ascii", "-a"],
 		"jsonName": "ascii",
 		"type": "bool",
+		"humanName": "ASCII",
 		"description": "a trip back to 1970"
 	}, {
 		"key": ["--asciicols", "-ac"],
 		"jsonName": "asciiCols",
 		"type": "int",
 		"default": 80,
+		"humanName": "ASCII cols",
 		"description": "if ascii, number of text columns"
 	}]
 }

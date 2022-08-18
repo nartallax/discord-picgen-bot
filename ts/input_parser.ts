@@ -1,12 +1,25 @@
+import {DefaultInteraction} from "bot"
 import {BotError} from "bot_error"
-
-type ParamValue = GenerationParamDescriptionValueType<GenerationParamDescription>
-type ParamValuesObject = Record<string, ParamValue>
+import {Config} from "types"
 
 export interface GenerationInput {
 	readonly prompt: string
+	readonly paramsPassedByHuman: readonly string[]
 	readonly params: ParamValuesObject
+	readonly id: number
+	readonly channelId: string
 }
+
+export function genInputToString(input: GenerationInput, config: Config): string {
+	const lengthLimit = Math.max(3, config.promptCutoffLimitInDisplay || 50)
+	const shortPrompt = input.prompt.length > lengthLimit
+		? input.prompt.substring(0, lengthLimit - 3) + "..."
+		: input.prompt
+	return `#${input.id}: ${shortPrompt}`
+}
+
+type ParamValue = GenerationParamDescriptionValueType<GenerationParamDescription>
+type ParamValuesObject = Record<string, ParamValue>
 
 export type GenerationParamDescription = GenerationStringParamDescription | GenerationNumberParamDescription | GenerationBoolParamDescription | GenerationEnumParamDescription
 
@@ -15,6 +28,7 @@ interface GenerationParamDescriptionBase<T> {
 	readonly jsonName: string
 	readonly description?: string
 	readonly default?: T
+	readonly humanName?: string
 }
 
 type GenerationParamDescriptionValueType<T> = T extends GenerationParamDescriptionBase<infer V> ? V : null
@@ -35,6 +49,8 @@ interface GenerationNumberParamDescription extends GenerationParamDescriptionBas
 interface GenerationBoolParamDescription extends GenerationParamDescriptionBase<boolean> {
 	readonly type: "bool"
 }
+
+let inputId = 0
 
 export class GenParamParser {
 	private defMap = new Map<string, GenerationParamDescription>()
@@ -59,11 +75,13 @@ export class GenParamParser {
 		this.defMap.set(key, def)
 	}
 
-	parse(paramStr: string): GenerationInput {
+	parse(paramStr: string, interaction: DefaultInteraction): GenerationInput {
 		const {prompt, paramsArr} = this.split(paramStr)
 		const params = this.parseParams(paramsArr)
+		const paramsPassedByHuman = Object.keys(params)
 		this.checkAndUseDefaults(params)
-		return {prompt, params}
+		const id = ++inputId
+		return {prompt, params, id, channelId: interaction.channelId, paramsPassedByHuman}
 	}
 
 	private split(paramStr: string): {prompt: string, paramsArr: readonly string[]} {

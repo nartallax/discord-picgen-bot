@@ -1,4 +1,4 @@
-import {GenerationParamDescription} from "generation_input"
+import {GenerationParamDescription} from "input_parser"
 
 export interface Config {
 	/** Client ID. Get it from here:
@@ -7,4 +7,6 @@ export interface Config {
 	readonly guildID: string
 	readonly params: GenerationParamDescription[]
 	readonly commandTemplate: string
+	readonly promptCutoffLimitInDisplay?: number
+	readonly helpHeader?: string
 }
