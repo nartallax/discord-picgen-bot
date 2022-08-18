@@ -2,7 +2,7 @@
   "name": "@nartallax/discord-picgen-bot",
   "version": "1.0.0",
   "description": "A Discord bot that wraps some picture-generating tool.",
-  "main": "target/main.js",
+  "main": "./bot.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/nartallax/discord-picgen-bot"
@@ -18,5 +18,11 @@
     "eslint": "^8.5.0",
     "tslib": "^2.3.1",
     "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@discordjs/rest": "^1.0.1",
+    "@types/shell-quote": "^1.7.1",
+    "discord.js": "^14.2.0",
+    "shell-quote": "^1.7.3"
   }
 }

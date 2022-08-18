@@ -14,7 +14,8 @@ module.exports = {
     "**/node_modules/**",
     "**/generated/**",
     "build",
-    ".eslintrc.js"
+    ".eslintrc.js",
+    "picture_generator_example.js"
   ],
   rules: {
     // у const есть свои применения, но требовать его вообще везде - значит загрязнять код

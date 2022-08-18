@@ -3,7 +3,7 @@
         "target": "es2018",
         "entryModule": "ts/main.ts",
         "entryFunction": "main",
-        "outFile": "target/main.js",
+        "outFile": "target/bot.js",
     },
 
     "include": [
@@ -70,6 +70,7 @@
         "noStrictGenericChecks": false,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "noUncheckedIndexedAccess": true
+        "noUncheckedIndexedAccess": true,
+        "useUnknownInCatchVariables": true
     }
 }

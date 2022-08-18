@@ -1,1 +1,75 @@
-{}
+{
+	"clientID": "469771750285115392",
+	"guildID": "581216905654960129",
+	"commandTemplate": "node picture_generator_example.js $INPUT_JSON",
+	"params": [{
+		"key": ["--height", "-H"],
+		"jsonName": "height",
+		"type": "int",
+		"description": "height of the image",
+		"default": 512
+	}, {
+		"key": ["--width", "-W"],
+		"jsonName": "width",
+		"type": "int",
+		"description": "width of the image",
+		"default": 512
+	}, {
+		"key": ["--cfg_scale", "-C"],
+		"jsonName": "scale",
+		"type": "float",
+		"description": "CFG scale factor",
+		"default": 7
+	}, {
+		"key": ["--number", "-n"],
+		"jsonName": "number",
+		"type": "int",
+		"default": 1,
+		"description": "number of images"
+	}, {
+		"key": ["--separate-images", "-i"],
+		"jsonName": "separateImages",
+		"type": "bool",
+		"description": "returns multiple images as separate files"
+	}, {
+		"key": ["--grid", "-g"],
+		"jsonName": "grid",
+		"type": "bool",
+		"description": "composite multiple images into grid"
+	}, {
+		"key": ["--sampler", "-A"],
+		"jsonName": "sampler",
+		"type": "enum",
+		"default": "k_lms",
+		"allowedValues": ["k_lms", "ddim", "plms", "k_euler", "k_euler_ancestral", "k_neun", "k_dpm_2", "k_dpm_2_ancestral"]
+	}, {
+		"key": ["--steps", "-s"],
+		"jsonName": "steps",
+		"type": "int",
+		"default": 50,
+		"description": "number of steps"
+	}, {
+		"key": ["--seed", "-S"],
+		"jsonName": "seed",
+		"type": "string",
+		"default": "",
+		"description": "random seed to use"
+	}, {
+		"key": ["--prior", "-p"],
+		"jsonName": "prior",
+		"type": "string",
+		"default": "",
+		"description": "vector_adjust_prior"
+	}, {
+		"key": ["--ascii", "-a"],
+		"jsonName": "ascii",
+		"type": "bool",
+		"description": "a trip back to 1970"
+	}, {
+		"key": ["--asciicols", "-ac"],
+		"jsonName": "asciiCols",
+		"type": "int",
+		"default": 80,
+		"description": "if ascii, number of text columns"
+	}]
+}

@@ -5,4 +5,4 @@ cd `dirname "$0"`
 cd ..
 
 ./scripts/build.sh
-node target/main.js
+node target/bot.js
