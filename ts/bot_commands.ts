@@ -1,132 +1,238 @@
-import {CommandArr} from "bot"
-import * as Discord from "discord.js"
-import {genInputToString} from "input_parser"
+import {CommandDef, CommandResult} from "bot"
+import {AppContext} from "context"
+import {GenTask} from "types"
 
-export const commands: readonly CommandArr[] = [
+type StartGenResult = CommandResult & {taskId?: number}
+function startGen(context: AppContext, task: GenTask): StartGenResult {
+	let resp = context.formatter.dreamNewTaskCreated(task)
+	if(task.droppedPromptWordsCount > 0){
+		resp += "\n\n" + context.formatter.dreamPromptWordsDroppedOnTaskCreation(task)
+	}
+	context.queue.put(task)
+	return {reply: resp, taskId: task.id}
+}
 
-	[
-		"lenny", // just for lulz
-		"( ͡° ͜ʖ ͡°)",
-		interaction => {
-			interaction.reply("( ͡° ͜ʖ ͡°)")
+const _commands = {
+	lenny: cmd({
+		description: () => "( ͡° ͜ʖ ͡°)",
+		handler: () => {
+			return {reply: "( ͡° ͜ʖ ͡°)"}
+		},
+		reacts: {
+			"🤔": (context, reaction) => {
+				context.bot.runCommand({
+					...reaction.commandMessage,
+					userId: reaction.reactUserId
+				})
+			}
 		}
-	],
+	}),
 
-	[
-		"dreamhelp",
-		"Displays help about /dream command",
-		(interaction, context) => {
+	dreamhelp: cmd({
+		description: context => context.formatter.dreamhelpDescription(),
+		handler: (context, command) => {
 			let str = context.cmdParser.makeHelpStr()
-			const header = context.config.helpHeader || "Usage: /dream prompt [params]"
-			str = header + "\n\n" + str
-			interaction.reply("```\n" + str + "\n```")
+			const header = context.formatter.dreamhelpHeader(command)
+			str = (header ? header + "\n\n" : "") + str
+			return {reply: "```\n" + str + "\n```"}
 		}
-	],
+	}),
 
-	[
-		new Discord.SlashCommandBuilder()
-			.setName("dream")
-			.setDescription("Generate a picture by parameters")
-			.addStringOption(opt => opt.setName("params")
-				.setDescription("A string with a prompt and other parameters")
-				.setRequired(true)
-			)
-			.toJSON(),
-		(interaction, context) => {
-			const paramsStr = interaction.options.get("params")?.value
+	dream: cmd({
+		description: context => context.formatter.dreamDescription(),
+		params: {
+			params: {
+				type: "string",
+				description: context => context.formatter.dreamParamDescription(),
+				required: true
+			}
+		},
+		reacts: {
+			"🔁": (context, react) => {
+				context.bot.runCommand({
+					...react.commandMessage,
+					userId: react.reactUserId
+				})
+			},
+			"🔪": (context, react) => {
+				const taskId = (react.commandResult as StartGenResult).taskId
+				if(taskId){
+					context.bot.runCommand({
+						...react.commandMessage,
+						command: "drop",
+						options: {task_id: taskId},
+						userId: react.reactUserId
+					})
+				}
+			}
+		},
+		handler: (context, command) => {
+			const paramsStr = command.options.params
 			if(typeof(paramsStr) !== "string"){
-				interaction.reply("Hey, where's parameters? I need them to generate anything, y'know.")
-				return
+				return {
+					reply: context.formatter.dreamNoParams(command),
+					isRefuse: true
+				}
 			}
-			const input = context.cmdParser.parse(paramsStr, interaction)
-			interaction.reply("Got new task: " + genInputToString(input, context.config))
-			context.queue.put(input)
+			const task = context.cmdParser.parse(paramsStr, command)
+			return startGen(context, task)
 		}
-	],
+	}),
 
-	[
-		"status",
-		"Display generation queue and currently processed task",
-		(interaction, context) => {
+	status: cmd({
+		description: context => context.formatter.statusDescription(),
+		handler: (context, command) => {
 			let result = ""
-			const runningState = context.runner.describeCurrentTask()
-			if(runningState){
-				result += "Running:\n" + runningState + "\n\n"
+
+			const runningTask = context.runner.currentRunningTask
+			if(runningTask){
+				const str = context.formatter.statusRunningTask(runningTask) || ""
+				const prefix = context.formatter.statusRunningTaskPrefix(command) || ""
+				result += prefix + str
 			}
 
-			const queueState = context.queue.showItems()
-			if(queueState){
-				result += "Queued:\n" + queueState
+			let queueStr = ""
+			for(const queuedItem of context.queue){
+				const str = context.formatter.statusQueuedTask(queuedItem) || ""
+				if(str){
+					if(queueStr){
+						queueStr += "\n"
+					}
+					queueStr += str
+				}
+			}
+			if(queueStr){
+				const queuePrefix = context.formatter.statusQueuedTaskPrefix(command) || ""
+				if(result){
+					result += "\n\n"
+				}
+				result += queuePrefix + queueStr
 			}
 
 			if(!result){
-				result = "Nothing going on!"
+				result = context.formatter.statusNoTasks(command) || ""
 			}
 
-			interaction.reply(result)
+			return {reply: result}
+		},
+		reacts: {
+			"🔪": (context, react) => {
+				context.bot.runCommand({
+					...react.commandMessage,
+					command: "kill",
+					options: {},
+					userId: react.reactUserId
+				})
+			},
+			"🔥": (context, react) => {
+				context.bot.runCommand({
+					...react.commandMessage,
+					command: "purge",
+					options: {},
+					userId: react.reactUserId
+				})
+			},
+			"🧼": (context, react) => {
+				context.bot.runCommand({
+					...react.commandMessage,
+					command: "clear",
+					options: {},
+					userId: react.reactUserId
+				})
+			}
 		}
-	],
+	}),
 
-	[
-		new Discord.SlashCommandBuilder()
-			.setName("drop")
-			.setDescription("Drop a specific task by its ID")
-			.addNumberOption(opt => opt.setName("task_id")
-				.setDescription("ID of task to be dropped")
-				.setRequired(true)
-			)
-			.toJSON(),
-		(interaction, context) => {
-			const taskId = interaction.options.get("task_id")?.value
+	drop: cmd({
+		description: context => context.formatter.dropDescription(),
+		params: {
+			task_id: {
+				type: "number",
+				description: context => context.formatter.dropTaskIdDescription(),
+				required: true
+			}
+		},
+		handler: (context, command) => {
+			const taskId = command.options.task_id
 			if(typeof(taskId) !== "number" || !taskId || Number.isNaN(taskId)){
-				interaction.reply("Hey, gimme a task ID! What task should I drop?")
-				return
+				return {
+					reply: context.formatter.dropNoTaskId(command),
+					isRefuse: true
+				}
 			}
-			if(context.runner.currentRunningTask?.input.id === taskId){
+			const currentTask = context.runner.currentRunningTask
+			if(currentTask && currentTask.id === taskId){
 				context.runner.killCurrentTask()
-				interaction.reply(`Task #${taskId} was the current running task. Stopped.`)
-				return
+				return {
+					reply: context.formatter.dropKilledRunningTask(command, currentTask)
+				}
 			}
-			if(context.queue.drop(taskId)){
-				interaction.reply(`Removed task #${taskId} from the queue.`)
-				return
+			const droppedTask = context.queue.drop(taskId)
+			if(droppedTask){
+				return {reply: context.formatter.dropDequeuedTask(command, droppedTask)}
 			}
-			interaction.reply(`Could not find task #${taskId} anywhere. You sure you're not mistaken?`)
+			return {
+				reply: context.formatter.dropTaskNotFound(command, taskId),
+				isRefuse: true
+			}
 		}
-	],
+	}),
 
-	[
-		"purge",
-		"Stop current generation and clear the queue",
-		(interaction, context) => {
+	purge: cmd({
+		description: context => context.formatter.purgeDescription(),
+		handler: (context, command) => {
 			context.queue.clear()
 			if(context.runner.currentRunningTask){
 				context.runner.killCurrentTask()
 			}
-			interaction.reply("Purged! :fire:")
+			return {reply: context.formatter.purgeCompleted(command)}
 		}
-	],
+	}),
 
-	[
-		"clear",
-		"Clear the queue without stopping current generation",
-		(interaction, context) => {
+	clear: cmd({
+		description: context => context.formatter.clearDescription(),
+		handler: (context, command) => {
 			context.queue.clear()
-			interaction.reply("Cleared! :soap:")
+			return {reply: context.formatter.clearCompleted(command)}
 		}
-	],
+	}),
 
-	[
-		"kill",
-		"Interrupt currently running task",
-		(interaction, context) => {
-			if(context.runner.currentRunningTask){
+	kill: cmd({
+		description: context => context.formatter.killDescription(),
+		handler: (context, command) => {
+			const currentTask = context.runner.currentRunningTask
+			if(currentTask){
 				context.runner.killCurrentTask()
-				interaction.reply("Killed! :knife:")
+				return {reply: context.formatter.killSuccess(command, currentTask)}
 			} else {
-				interaction.reply("No task is running, what do you want from me, weird human?")
+				return {
+					reply: context.formatter.killTaskNotFound(command),
+					isRefuse: true
+				}
 			}
-
 		}
-	]
-]
+	}),
+
+	dreamrepeat: cmd({
+		description: context => context.formatter.dreamrepeatDescription(),
+		handler: (context, command) => {
+			const task = context.cmdParser.getLastQueryOfUser(command.userId)
+			if(!task){
+				return {
+					reply: context.formatter.dreamrepeatNoPreviousFound(command),
+					isRefuse: true
+				}
+			}
+			return startGen(context, task)
+		}
+	})
+}
+
+export type CommandName = keyof typeof _commands
+
+export const commands = _commands as {readonly [name in CommandName]: CommandDef}
+
+// just for typecasting
+function cmd<P extends string, R extends CommandResult>(def: CommandDef<R, P>): CommandDef<R, P> {
+	return def
+}

@@ -1,92 +1,83 @@
-import {DefaultInteraction} from "bot"
+import {CommandMessageProperties} from "bot"
 import {BotError} from "bot_error"
-import {Config} from "types"
+import {AppContext} from "context"
+import {GenParamDescription, GenParamValue, GenParamValuesObject, GenTaskInput} from "types"
 
-export interface GenerationInput {
-	readonly prompt: string
-	readonly paramsPassedByHuman: readonly string[]
-	readonly params: ParamValuesObject
-	readonly id: number
-	readonly channelId: string
-}
-
-export function genInputToString(input: GenerationInput, config: Config): string {
-	const lengthLimit = Math.max(3, config.promptCutoffLimitInDisplay || 50)
-	const shortPrompt = input.prompt.length > lengthLimit
-		? input.prompt.substring(0, lengthLimit - 3) + "..."
-		: input.prompt
-	return `#${input.id}: ${shortPrompt}`
-}
-
-type ParamValue = GenerationParamDescriptionValueType<GenerationParamDescription>
-type ParamValuesObject = Record<string, ParamValue>
-
-export type GenerationParamDescription = GenerationStringParamDescription | GenerationNumberParamDescription | GenerationBoolParamDescription | GenerationEnumParamDescription
-
-interface GenerationParamDescriptionBase<T> {
-	readonly key: string | readonly string[]
-	readonly jsonName: string
-	readonly description?: string
-	readonly default?: T
-	readonly humanName?: string
-}
-
-type GenerationParamDescriptionValueType<T> = T extends GenerationParamDescriptionBase<infer V> ? V : null
-
-interface GenerationStringParamDescription extends GenerationParamDescriptionBase<string> {
-	readonly type: "string"
-}
-
-interface GenerationEnumParamDescription extends GenerationParamDescriptionBase<string> {
-	readonly type: "enum"
-	readonly allowedValues: string[]
-}
-
-interface GenerationNumberParamDescription extends GenerationParamDescriptionBase<number> {
-	readonly type: "int" | "float"
-}
-
-interface GenerationBoolParamDescription extends GenerationParamDescriptionBase<boolean> {
-	readonly type: "bool"
-}
-
-let inputId = 0
+let taskIdCounter = 0
 
 export class GenParamParser {
-	private defMap = new Map<string, GenerationParamDescription>()
+	private genParams = new Map<string, GenParamDescription>()
 
-	constructor(defs: readonly GenerationParamDescription[]) {
-		for(const def of defs){
-			if(typeof(def.key) === "string"){
-				this.registerParam(def.key, def)
-			} else {
-				for(const key of def.key){
-					this.registerParam(key, def)
-				}
+	private readonly lastQueryByUser = new Map<string, GenTaskInput>()
+	private readonly privateParamName: string | undefined
+
+	constructor(private readonly context: AppContext) {
+		for(const def of context.config.params){
+			const keys = allKeysOf(def)
+			for(const key of keys){
+				this.registerParam(key, def)
 			}
 		}
+		const privateParam = context.config.params.find(x => x.type === "bool" && x.role === "private")
+		this.privateParamName = privateParam?.jsonName
 	}
 
-	private registerParam(key: string, def: GenerationParamDescription) {
-		const oldDef = this.defMap.get(key)
+	private registerParam(key: string, def: GenParamDescription) {
+		const oldDef = this.genParams.get(key)
 		if(oldDef && oldDef !== def){
 			throw new Error(`Bad config! There are two parameters with key ${key}: "${oldDef.jsonName}" and "${def.jsonName}". This won't work well! Fix that.`)
 		}
-		this.defMap.set(key, def)
+		this.genParams.set(key, def)
 	}
 
-	parse(paramStr: string, interaction: DefaultInteraction): GenerationInput {
-		const {prompt, paramsArr} = this.split(paramStr)
+	parse(paramStr: string, msg: CommandMessageProperties): GenTaskInput {
+		const {prompt: rawPrompt, paramsArr} = this.split(paramStr)
 		const params = this.parseParams(paramsArr)
+		const [prompt, droppedWords] = this.dropExcessWords(rawPrompt)
+
 		const paramsPassedByHuman = Object.keys(params)
 		this.checkAndUseDefaults(params)
-		const id = ++inputId
-		return {prompt, params, id, channelId: interaction.channelId, paramsPassedByHuman}
+		const isPrivate = !this.privateParamName ? false : !!params[this.privateParamName]
+		const result: GenTaskInput = {prompt, params, id: 0, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate}
+
+		this.lastQueryByUser.set(result.userId, result)
+
+		return this.makeNew(result)
+	}
+
+	getLastQueryOfUser(userId: string): GenTaskInput | undefined {
+		let result = this.lastQueryByUser.get(userId)
+		if(result){
+			result = this.makeNew(result)
+		}
+		return result
+	}
+
+	private makeNew(input: GenTaskInput): GenTaskInput {
+		input = {
+			...input,
+			id: ++taskIdCounter
+		}
+		input = JSON.parse(JSON.stringify(input)) // just to be sure
+		return input
+	}
+
+	private dropExcessWords(prompt: string): [string, number] {
+		if(!this.context.config.maxWordCountInPrompt){
+			return [prompt, 0]
+		}
+		let words = prompt.split(/[\s\t\r\n]+/g)
+		const droppedCount = Math.max(0, words.length - this.context.config.maxWordCountInPrompt)
+		if(droppedCount > 0){
+			words = words.slice(0, this.context.config.maxWordCountInPrompt)
+			prompt = words.join(" ")
+		}
+		return [prompt, droppedCount]
 	}
 
 	private split(paramStr: string): {prompt: string, paramsArr: readonly string[]} {
 		const rawParamParts = paramStr.split(/\s+/)
-		const firstKeyIndex = rawParamParts.findIndex(part => this.defMap.has(part))
+		const firstKeyIndex = rawParamParts.findIndex(part => this.genParams.has(part))
 		let promptParts: string[], paramParts: string[]
 		if(firstKeyIndex < 0){
 			promptParts = rawParamParts
@@ -99,12 +90,12 @@ export class GenParamParser {
 		return {prompt: promptParts.join(" "), paramsArr: paramParts}
 	}
 
-	private parseParams(params: readonly string[]): ParamValuesObject {
-		const usedParams = new Set<GenerationParamDescription>()
-		const result = {} as ParamValuesObject
+	private parseParams(params: readonly string[]): GenParamValuesObject {
+		const usedParams = new Set<GenParamDescription>()
+		const result = {} as GenParamValuesObject
 		for(let i = 0; i < params.length; i++){
 			const key = params[i]!
-			const def = this.defMap.get(key)
+			const def = this.genParams.get(key)
 			if(!def){
 				// should never happen
 				throw new BotError("No param is defined for key " + key)
@@ -113,7 +104,7 @@ export class GenParamParser {
 				throw new BotError("One of parameters is defined twice, last time with key " + key)
 			}
 
-			let value: ParamValue
+			let value: GenParamValue
 			if(def.type === "bool"){
 				value = true
 			} else {
@@ -150,8 +141,8 @@ export class GenParamParser {
 		return result
 	}
 
-	private checkAndUseDefaults(params: ParamValuesObject): void {
-		for(const def of new Set([...this.defMap.values()])){
+	private checkAndUseDefaults(params: GenParamValuesObject): void {
+		for(const def of new Set([...this.genParams.values()])){
 			if(def.jsonName in params){
 				continue
 			}
@@ -164,7 +155,7 @@ export class GenParamParser {
 				continue
 			}
 
-			const keyString = typeof(def.key) === "string" ? def.key : def.key.join(" / ")
+			const keyString = allKeysOf(def).join(" / ")
 			throw new BotError(`No value is provided for parameter ${keyString}, and it has no default. Cannot continue without this value.`)
 		}
 	}
@@ -172,12 +163,12 @@ export class GenParamParser {
 	makeHelpStr(): string {
 		const result = [] as [string, string][]
 		let longestKeys = 0
-		for(const def of new Set([...this.defMap.values()])){
-			let keyStr = typeof(def.key) === "string" ? def.key : def.key.join(", ")
+		for(const def of new Set([...this.genParams.values()])){
+			let keyStr = visibleKeysOf(def).join(", ")
 			keyStr += " (" + def.type + ")"
 			longestKeys = Math.max(longestKeys, keyStr.length)
 			let valueStr = ""
-			if(def.default && def.type !== "bool"){
+			if(def.default !== undefined && def.type !== "bool"){
 				valueStr += "[" + def.default + "] "
 			}
 			if(def.description){
@@ -194,4 +185,15 @@ export class GenParamParser {
 		}).join("\n")
 	}
 
+}
+
+function visibleKeysOf(def: GenParamDescription): readonly string[] {
+	return typeof(def.key) === "string" ? [def.key] : def.key
+}
+
+function allKeysOf(def: GenParamDescription): string[] {
+	return [
+		...visibleKeysOf(def),
+		...(def.keyHidden === undefined ? [] : typeof(def.keyHidden) === "string" ? [def.keyHidden] : def.keyHidden)
+	]
 }

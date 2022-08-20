@@ -3,9 +3,95 @@
 	"guildID": "581216905654960129",
 	"commandTemplate": "node picture_generator_example.js $INPUT_JSON",
 	"promptCutoffLimitInDisplay": 50,
-	"helpHeader": "Usage: /dream prompt [params]",
+	"deleteFiledAfterUpload": false,
+	"maxWordCountInPrompt": 77,
+	"reactionWaitingTimeSeconds": 86400,
+	"text": {
+		"dream": {
+			"description": "Generate a picture by parameters",
+			"paramDescription": "Prompt and other parameters of generation",
+			"newTaskCreated": {
+				"public": "Got new task #$TASK_ID: $PROMPT\n$PARAMS_NICE",
+				"private": "Got new task #$TASK_ID"
+			},
+			"outputPicture": {
+				"public": "Picture $PICTURES_GENERATED / $PICTURES_EXPECTED in task #$TASK_ID, $TIME_PASSED"
+			},
+			"promptWordsDroppedOnTaskCreation": {
+				"public": "Dropped $DROPPED_PROMPT_WORDS_COUNT words from prompt. Only allowed to have up to $PROMPT_WORDS_LIMIT words in prompt."
+			},
+			"generationCompleted": {
+				"public": "$USER, generation #$TASK_ID completed in $TIME_PASSED, generated $PICTURES_GENERATED / $PICTURES_EXPECTED pictures",
+				"private": "Generation #$TASK_ID completed in $TIME_PASSED, generated $PICTURES_GENERATED / $PICTURES_EXPECTED pictures"
+			},
+			"outputPictureNotFound": {
+				"public": "Output file not found: $GENERATED_PICTURE_PATH"
+			},
+			"cannotReadOutputPicture": {
+				"public": "Failed to read output file $GENERATED_PICTURE_PATH"
+			},
+			"noParams": "Hey $USER, where's parameters? I need them to generate anything, y'know."
+		},
+		"dreamhelp": {
+			"description": "Displays help about /dream command",
+			"header": "Usage: /dream prompt [params]"
+		},
+		"status": {
+			"description": "Display generation queue and currently processed task",
+			"runningTasksPrefix": "**Running**:\n",
+			"runningTask":	{
+				"public": "#**$TASK_ID**: $PROMPT_SHORT ($TIME_PASSED, $PICTURES_GENERATED / $PICTURES_EXPECTED)",
+				"private": "#**$TASK_ID**: <prompt hidden> ($TIME_PASSED, $PICTURES_GENERATED / $PICTURES_EXPECTED)"
+			},
+			"queuedTasksPrefix": "**Queued**:\n",
+			"queuedTask": {
+				"public": "#**$TASK_ID**: $PROMPT_SHORT",
+				"private": "#**$TASK_ID**: <prompt hidden>"
+			},
+			"noTasks": "Nothing going on!"
+		},
+		"drop": {
+			"description": "Drop a specific task by its ID",
+			"taskIdDescription": "ID of task to be dropped",
+			"noTaskId": "Hey $USER, gimme a task ID! What task should I drop?",
+			"killedRunningTask": {
+				"public": "Task #$TASK_ID was the current running task. Stopped."
+			},
+			"dequeuedTask": {
+				"public": "Removed task #$TASK_ID from the queue."
+			},
+			"taskNotFound": "Hey $USER, task #$TASK_ID is nowhere to be found! Whadda you want from me, weird human?"
+		},
+		"purge": {
+			"description": "Stop current generation and clear the queue",
+			"completed": "Purged! :fire:"
+		},
+		"clear": {
+			"description": "Clear the queue without stopping current generation",
+			"completed": "Cleared! :soap:"
+		},
+		"kill": {
+			"description": "Interrupt currently running task",
+			"success": {
+				"public": "Killed task #$TASK_ID! :knife:"
+			},
+			"taskNotFound": "Hey $USER, no task is running, what do you want from me, weird human?"
+		},
+		"dreamrepeat": {
+			"description": "Repeat last /dream command of this user",
+			"noPreviousFound": "Hey $USER, I don't remember you posting any requests. Maybe I did restart since then?"
+		}
+	},
 	"params": [{
+		"key": ["--private"],
+		"jsonName": "private",
+		"role": "private",
+		"type": "bool",
+		"humanName": "Private",
+		"description": "hides prompt and params from bot output"
+	}, {
 		"key": ["--height", "-H"],
+		"keyHidden": ["-h"],
 		"jsonName": "height",
 		"type": "int",
 		"humanName": "Height",

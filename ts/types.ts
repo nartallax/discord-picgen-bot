@@ -1,12 +1,129 @@
-import {GenerationParamDescription} from "input_parser"
+import * as ChildProcess from "child_process"
+import * as Stream from "stream"
+
+interface PrivatePublicTemplate {
+	private: string
+	public: string
+}
 
 export interface Config {
 	/** Client ID. Get it from here:
 	 * https://discord.com/developers/applications/<your_bot_id>/oauth2/general */
 	readonly clientID: string
 	readonly guildID: string
-	readonly params: GenerationParamDescription[]
+	readonly params: GenParamDescription[]
 	readonly commandTemplate: string
 	readonly promptCutoffLimitInDisplay?: number
-	readonly helpHeader?: string
+	readonly deleteFiledAfterUpload?: boolean
+	readonly maxWordCountInPrompt?: number
+	readonly reactionWaitingTimeSeconds?: number
+	readonly text?: ROOptDeep<{
+		dream: {
+			description: string
+			paramDescription: string
+			outputPictureNotFound: PrivatePublicTemplate
+			cannotReadOutputPicture: PrivatePublicTemplate
+			outputPicture: PrivatePublicTemplate
+			generationCompleted: PrivatePublicTemplate
+			noParams: string
+			newTaskCreated: PrivatePublicTemplate
+			promptWordsDroppedOnTaskCreation: PrivatePublicTemplate
+		}
+		dreamhelp: {
+			description: string
+			header: string
+		}
+		status: {
+			description: string
+			runningTask: PrivatePublicTemplate
+			queuedTask: PrivatePublicTemplate
+			runningTasksPrefix: string
+			queuedTasksPrefix: string
+			noTasks: string
+		}
+		drop: {
+			description: string
+			taskIdDescription: string
+			noTaskId: string
+			killedRunningTask: PrivatePublicTemplate
+			dequeuedTask: PrivatePublicTemplate
+			taskNotFound: string
+		}
+		purge: {
+			description: string
+			completed: string
+		}
+		clear: {
+			description: string
+			completed: string
+		}
+		kill: {
+			description: string
+			success: PrivatePublicTemplate
+			taskNotFound: string
+		}
+		dreamrepeat: {
+			description: string
+			noPreviousFound: string
+		}
+	}>
+}
+
+export interface GenTaskInput {
+	readonly prompt: string
+	readonly rawInputString: string
+	readonly rawParamString: string
+	readonly userId: string
+	readonly paramsPassedByHuman: readonly string[]
+	readonly params: GenParamValuesObject
+	readonly id: number
+	readonly channelId: string
+	readonly droppedPromptWordsCount: number
+	readonly isPrivate: boolean
+}
+
+export interface GenTask extends GenTaskInput {
+	totalExpectedPictures?: number
+	generatedPictures?: number
+	startTime?: number
+	exitCode?: number
+	process?: ChildProcess.ChildProcessByStdio<null, Stream.Readable, null>
+}
+
+export type GenParamValue = GenerationParamDescriptionValueType<GenParamDescription>
+export type GenParamValuesObject = Record<string, GenParamValue>
+
+export type GenParamDescription = GenerationStringParamDescription | GenerationNumberParamDescription | GenerationBoolParamDescription | GenerationEnumParamDescription
+
+interface GenerationParamDescriptionBase<T> {
+	readonly key: string | readonly string[]
+	readonly keyHidden?: string | readonly string[]
+	readonly jsonName: string
+	readonly description?: string
+	readonly default?: T
+	readonly humanName?: string
+}
+
+export type GenerationParamDescriptionValueType<T> = T extends GenerationParamDescriptionBase<infer V> ? V : null
+
+interface GenerationStringParamDescription extends GenerationParamDescriptionBase<string> {
+	readonly type: "string"
+}
+
+interface GenerationEnumParamDescription extends GenerationParamDescriptionBase<string> {
+	readonly type: "enum"
+	readonly allowedValues: string[]
+}
+
+interface GenerationNumberParamDescription extends GenerationParamDescriptionBase<number> {
+	readonly type: "int" | "float"
+}
+
+interface GenerationBoolParamDescription extends GenerationParamDescriptionBase<boolean> {
+	readonly type: "bool"
+	readonly role?: "private"
+}
+
+type ROOptDeep<T> = T extends string ? T : {
+	readonly [k in keyof T]?: ROOptDeep<T[k]>
 }

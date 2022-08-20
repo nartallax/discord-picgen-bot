@@ -1,19 +1,19 @@
 import {AppContext} from "context"
-import {GenerationInput, genInputToString} from "input_parser"
+import {GenTask} from "types"
 import {errToString} from "utils"
 
 export class GenQueue {
 
 	constructor(private readonly context: AppContext) {}
 
-	private arr: GenerationInput[] = []
+	private arr: GenTask[] = []
 
-	put(input: GenerationInput): void {
+	put(input: GenTask): void {
 		this.arr.push(input)
 		this.tryStart()
 	}
 
-	private get(): GenerationInput | undefined {
+	private get(): GenTask | undefined {
 		const first = this.arr[0]
 		this.arr = this.arr.splice(1)
 		return first
@@ -23,14 +23,22 @@ export class GenQueue {
 		this.arr.length = 0
 	}
 
-	drop(id: number): boolean {
-		const oldLen = this.arr.length
-		this.arr = this.arr.filter(x => x.id !== id)
-		return oldLen !== this.arr.length
+	drop(id: number): GenTask | undefined {
+		let result: GenTask | undefined = undefined
+		this.arr = this.arr.filter(x => {
+			if(x.id === id){
+				result = x
+				return false
+			}
+			return true
+		})
+		return result
 	}
 
-	showItems(): string {
-		return this.arr.map(item => genInputToString(item, this.context.config)).join("\n")
+	* [Symbol.iterator](): IterableIterator<GenTask> {
+		for(const item of this.arr){
+			yield item
+		}
 	}
 
 	async tryStart(): Promise<void> {

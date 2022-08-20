@@ -17,8 +17,15 @@ async function main() {
 	// stderr logs can be seen in bot's own stderr
 	process.stderr.write("Got parameters! " + JSON.stringify(parameters) + "\n")
 
-	// we will generate 6 pictures
-	for(let i = 0; i < 6; i++){
+	const willGenerateFilesCount = 2
+	
+	// let's tell the bot how many pictures to expect
+	// if you don't, or tell incorrect number of pictures - it won't break anything
+	// it just allows for more beautiful inputs
+	process.stdout.write(JSON.stringify({willGenerateCount: willGenerateFilesCount}) + "\n")
+
+	// we will generate some pictures
+	for(let i = 0; i < willGenerateFilesCount; i++){
 		// sleep for 5 seconds
 		// implying some generation is going on, it's a slow process, give it some time
 		await new Promise(ok => setTimeout(ok, 5000))

@@ -1,23 +1,14 @@
 import {BotError} from "bot_error"
-import {GenerationInput, genInputToString} from "input_parser"
 import * as ShellQuote from "shell-quote"
 import * as ChildProcess from "child_process"
 import * as ReadLine from "readline"
-import * as Discord from "discord.js"
 import * as Path from "path"
 import {promises as Fs} from "fs"
-import {Readable} from "stream"
 import {AppContext} from "context"
 import {errToString, isEnoent} from "utils"
+import {GenTask} from "types"
 
-export interface GenTask {
-	readonly startTime: number
-	readonly input: GenerationInput
-	exitCode?: number
-	process?: ChildProcess.ChildProcessByStdio<null, Readable, null>
-}
-
-type OutputLine = GeneratedFileLine | ErrorLine
+type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine
 
 interface GeneratedFileLine {
 	generatedPicture: string
@@ -33,6 +24,13 @@ function isErrorLine(line: OutputLine): line is ErrorLine {
 	return typeof((line as ErrorLine).error) === "string"
 }
 
+interface ExpectedPicturesLine {
+	willGenerateCount: number
+}
+function isExpectedPicturesLine(line: OutputLine): line is ExpectedPicturesLine {
+	return typeof((line as ExpectedPicturesLine).willGenerateCount) === "number"
+}
+
 export class GenRunner {
 
 	private currentTask: GenTask | null = null
@@ -41,20 +39,11 @@ export class GenRunner {
 		return this.currentTask
 	}
 
-	constructor(private readonly context: AppContext) {
-		// this should throw error on bad template
-		this.makeCommand({
-			prompt: "", params: {}, id: 0, channelId: "", paramsPassedByHuman: []
-		})
-	}
+	constructor(private readonly context: AppContext) {}
 
-	async runAndOutput(input: GenerationInput): Promise<void> {
-		const task: GenTask = {
-			input,
-			startTime: Date.now()
-		}
-
+	async runAndOutput(task: GenTask): Promise<void> {
 		try {
+			task.startTime = Date.now()
 			this.currentTask = task
 			await this.run(task)
 		} finally {
@@ -63,47 +52,47 @@ export class GenRunner {
 		}
 	}
 
-	private sendTaskMessage(task: GenTask, msg: string): Promise<void> {
-		return this.sendWithChannel(task, channel => {
-			channel.send(msg)
-		})
+	private sendTaskMessage(task: GenTask, msg: string | undefined): void {
+		this.context.bot.mbSend(task.channelId, msg)
 	}
 
-	private sendResult(task: GenTask, line: GeneratedFileLine): Promise<void> {
-		return this.sendWithChannel(task, async channel => {
-			let content: Buffer
-			try {
-				content = await Fs.readFile(line.generatedPicture)
-			} catch(e){
-				if(isEnoent(e)){
-					channel.send("Output file not found: " + line.generatedPicture)
-				} else {
-					channel.send("Failed to read output file " + line.generatedPicture)
-					console.error(errToString(e))
-				}
-				return
-			}
-
-			const attachment = new Discord.AttachmentBuilder(content, {
-				name: Path.basename(line.generatedPicture)
-			})
-
-			channel.send({files: [attachment]})
-		})
-	}
-
-	private async sendWithChannel(task: GenTask, callback: (channel: Discord.TextBasedChannel) => void | Promise<void>): Promise<void> {
+	private async sendResult(task: GenTask, line: GeneratedFileLine): Promise<void> {
+		task.generatedPictures = (task.generatedPictures || 0) + 1
+		let content: Buffer
 		try {
-			const channel = this.context.bot.getTextChannel(task.input.channelId)
-			await Promise.resolve(callback(channel))
+			content = await Fs.readFile(line.generatedPicture)
 		} catch(e){
-			this.context.bot.reportError(errToString(e), task.input.channelId)
+			if(isEnoent(e)){
+				this.context.bot.mbSend(
+					task.channelId,
+					this.context.formatter.dreamOutputPictureNotFound(task, line.generatedPicture)
+				)
+			} else {
+				this.context.bot.mbSend(
+					task.channelId,
+					this.context.formatter.dreamFailedToReadOutputPicture(task, line.generatedPicture)
+				)
+				console.error(errToString(e))
+			}
+			return
+		}
+
+		await this.context.bot.mbSend(
+			task.channelId,
+			{
+				content: this.context.formatter.dreamOutputPicture(task, line.generatedPicture),
+				files: [{name: Path.basename(line.generatedPicture), data: content}]
+			}
+		)
+
+		if(this.context.config.deleteFiledAfterUpload){
+			await Fs.rm(line.generatedPicture)
 		}
 	}
 
 	private async run(task: GenTask): Promise<void> {
 
-		const {bin, params, inputJson} = this.makeCommand(task.input)
+		const {bin, params, inputJson} = this.makeCommand(task)
 
 		const process = task.process = ChildProcess.spawn(bin, params, {
 			stdio: ["inherit", "pipe", "inherit"]
@@ -115,7 +104,7 @@ export class GenRunner {
 				if(typeof(code) === "number"){
 					task.exitCode = code
 				}
-				this.sendTaskMessage(task, `Generation #${task.input.id} completed in ${Math.ceil((Date.now() - task.startTime) / 1000)}s`)
+				this.sendTaskMessage(task, this.context.formatter.dreamGenerationCompleted(task))
 				ok()
 			})
 		})
@@ -131,10 +120,6 @@ export class GenRunner {
 
 	isTaskRunning(): boolean {
 		return !!this.currentTask
-	}
-
-	describeCurrentTask(): string {
-		return !this.currentTask ? "" : genInputToString(this.currentTask.input, this.context.config)
 	}
 
 	private addStdoutParser(task: GenTask): void {
@@ -159,13 +144,15 @@ export class GenRunner {
 				this.sendTaskMessage(task, line.error)
 			} else if(isGeneratedFileLine(line)){
 				this.sendResult(task, line)
+			} else if(isExpectedPicturesLine(line)){
+				task.totalExpectedPictures = line.willGenerateCount
 			} else {
 				console.error("Unknown action in line " + lineStr + ". Skipping it.")
 			}
 		})
 	}
 
-	private makeCommand(input: GenerationInput): {bin: string, params: readonly string[], inputJson: string} {
+	private makeCommand(input: GenTask): {bin: string, params: readonly string[], inputJson: string} {
 		const json = JSON.stringify({
 			prompt: input.prompt,
 			...input.params
