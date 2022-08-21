@@ -1,17 +1,20 @@
 {
 	"clientID": "469771750285115392",
 	"guildID": "581216905654960129",
+	"channelID": ["601126787497590784"],
 	"commandTemplate": "node picture_generator_example.js $INPUT_JSON",
 	"promptCutoffLimitInDisplay": 50,
 	"deleteFiledAfterUpload": false,
 	"maxWordCountInPrompt": 77,
 	"reactionWaitingTimeSeconds": 86400,
+	"tempPicturesDirectory": "./tmp_pictures",
+	"convertPicturesToFormat": "jpg",
 	"text": {
 		"dream": {
 			"description": "Generate a picture by parameters",
 			"paramDescription": "Prompt and other parameters of generation",
 			"newTaskCreated": {
-				"public": "Got new task #$TASK_ID: $PROMPT\n$PARAMS_NICE",
+				"public": "Got new task #$TASK_ID: $PROMPT\n$PARAMS_BY_KEYS_NICE",
 				"private": "Got new task #$TASK_ID"
 			},
 			"outputPicture": {

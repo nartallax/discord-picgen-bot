@@ -1,4 +1,4 @@
-import {CommandDef, CommandResult} from "bot"
+import {CommandDef, CommandResult, MessageReacts} from "bot"
 import {AppContext} from "context"
 import {GenTask} from "types"
 
@@ -12,6 +12,17 @@ function startGen(context: AppContext, task: GenTask): StartGenResult {
 	return {reply: resp, taskId: task.id}
 }
 
+export const displayQueueReact: MessageReacts = {
+	"🗒️": (context, reaction) => {
+		context.bot.runCommand({
+			channelId: reaction.channelId,
+			command: "status",
+			options: {},
+			userId: reaction.reactUserId
+		})
+	}
+}
+
 const _commands = {
 	lenny: cmd({
 		description: () => "( ͡° ͜ʖ ͡°)",
@@ -21,7 +32,9 @@ const _commands = {
 		reacts: {
 			"🤔": (context, reaction) => {
 				context.bot.runCommand({
-					...reaction.commandMessage,
+					command: "lenny",
+					options: {},
+					channelId: reaction.channelId,
 					userId: reaction.reactUserId
 				})
 			}
@@ -58,15 +71,16 @@ const _commands = {
 				const taskId = (react.commandResult as StartGenResult).taskId
 				if(taskId){
 					context.bot.runCommand({
-						...react.commandMessage,
 						command: "drop",
 						options: {task_id: taskId},
+						channelId: react.channelId,
 						userId: react.reactUserId
 					})
 				}
-			}
+			},
+			...displayQueueReact
 		},
-		handler: (context, command) => {
+		handler: async(context, command) => {
 			const paramsStr = command.options.params
 			if(typeof(paramsStr) !== "string"){
 				return {
@@ -74,7 +88,7 @@ const _commands = {
 					isRefuse: true
 				}
 			}
-			const task = context.cmdParser.parse(paramsStr, command)
+			const task = await context.cmdParser.parse(paramsStr, command)
 			return startGen(context, task)
 		}
 	}),
@@ -109,26 +123,28 @@ const _commands = {
 				result += queuePrefix + queueStr
 			}
 
+			let isRefuse = false
 			if(!result){
 				result = context.formatter.statusNoTasks(command) || ""
+				isRefuse = true
 			}
 
-			return {reply: result}
+			return {reply: result, isRefuse}
 		},
 		reacts: {
 			"🔪": (context, react) => {
 				context.bot.runCommand({
-					...react.commandMessage,
 					command: "kill",
 					options: {},
+					channelId: react.channelId,
 					userId: react.reactUserId
 				})
 			},
 			"🔥": (context, react) => {
 				context.bot.runCommand({
-					...react.commandMessage,
 					command: "purge",
 					options: {},
+					channelId: react.channelId,
 					userId: react.reactUserId
 				})
 			},
@@ -139,7 +155,8 @@ const _commands = {
 					options: {},
 					userId: react.reactUserId
 				})
-			}
+			},
+			...displayQueueReact
 		}
 	}),
 
@@ -186,7 +203,8 @@ const _commands = {
 				context.runner.killCurrentTask()
 			}
 			return {reply: context.formatter.purgeCompleted(command)}
-		}
+		},
+		reacts: displayQueueReact
 	}),
 
 	clear: cmd({
@@ -194,7 +212,8 @@ const _commands = {
 		handler: (context, command) => {
 			context.queue.clear()
 			return {reply: context.formatter.clearCompleted(command)}
-		}
+		},
+		reacts: displayQueueReact
 	}),
 
 	kill: cmd({
@@ -210,7 +229,8 @@ const _commands = {
 					isRefuse: true
 				}
 			}
-		}
+		},
+		reacts: displayQueueReact
 	}),
 
 	dreamrepeat: cmd({

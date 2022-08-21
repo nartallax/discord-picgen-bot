@@ -14,11 +14,17 @@ export interface CommandResult {
 	readonly isRefuse?: boolean
 }
 
+interface MessageAttachment {
+	readonly url: string
+	readonly contentType: string | null
+}
+
 export interface CommandMessageProperties<P extends string = string> {
 	readonly channelId: string
 	readonly userId: string
 	readonly command: string
 	readonly options: CommandOptionsObject<P>
+	readonly attachments?: readonly MessageAttachment[]
 }
 
 interface OptBase {
@@ -27,12 +33,17 @@ interface OptBase {
 	setRequired(flag: true): unknown
 }
 
+export interface MessageReacts<P extends string = string, R extends CommandResult = CommandResult> {
+	readonly [emote: string]: (context: AppContext, opts: CommandReactHandlerOptions<P, R>) => Async<void>
+}
+
 export type CommandOptionsObject<P extends string = string> = {readonly [key in P]: number | string}
 
 interface CommandReactHandlerOptions<P extends string = string, R extends CommandResult = CommandResult> {
 	readonly commandResult: R
 	readonly reactUserId: string
 	readonly commandMessage: CommandMessageProperties<P>
+	readonly channelId: string
 }
 
 export type CommandDef<R extends CommandResult = CommandResult, P extends string = string> = {
@@ -44,9 +55,7 @@ export type CommandDef<R extends CommandResult = CommandResult, P extends string
 			readonly required?: true
 		}
 	}
-	readonly reacts?: {
-		readonly [emote: string]: (context: AppContext, opts: CommandReactHandlerOptions<P, R>) => Async<void>
-	}
+	readonly reacts?: MessageReacts<P, R>
 	handler(context: AppContext, opts: CommandMessageProperties<P>): Async<R>
 }
 
@@ -55,6 +64,7 @@ export class Bot {
 	private readonly client: Discord.Client
 	private readonly rest: Discord.REST
 	private readonly commandStorage: InteractionStorage
+	private readonly allowedChannels: Set<string> | null
 
 	getTextChannel(id: string): Discord.TextBasedChannel {
 		const channel = this.client.channels.cache.get(id)
@@ -67,10 +77,15 @@ export class Bot {
 	constructor(readonly context: AppContext, readonly token: string) {
 		this.commandStorage = new InteractionStorage(context.config.reactionWaitingTimeSeconds || 86400)
 
+		this.allowedChannels = !context.config.channelID
+			? null
+			: new Set(context.config.channelID)
+
 		this.client = new Discord.Client({
 			intents: [
 				Discord.GatewayIntentBits.Guilds,
 				Discord.GatewayIntentBits.GuildMessages,
+				Discord.GatewayIntentBits.MessageContent,
 				Discord.GatewayIntentBits.GuildMessageReactions
 			],
 			partials: [
@@ -93,20 +108,16 @@ export class Bot {
 			const builder = new Discord.SlashCommandBuilder()
 			builder.setName(name)
 			const description = def.description(this.context)
-			console.log({name})
 			if(description){
-				console.log({cmdDesc: description})
 				builder.setDescription(description)
 			}
 			if(def.params){
 				for(const paramName in def.params){
-					console.log({paramName})
 					const param = def.params[paramName]!
 					const optBuilder = <T extends OptBase>(opt: T) => {
 						opt.setName(paramName)
 						const description = param.description(this.context)
 						if(description){
-							console.log({paramDesc: description})
 							opt.setDescription(description)
 						}
 						if(param.required){
@@ -142,17 +153,35 @@ export class Bot {
 		})
 	}
 
+	private isChannelAllowed(channelId: string): boolean {
+		return !this.allowedChannels || this.allowedChannels.has(channelId)
+	}
+
 	private listen(): void {
 		this.client.on("interactionCreate", interaction => {
-			if(!interaction.isChatInputCommand()){
+			if(!interaction.isChatInputCommand() || !this.isChannelAllowed(interaction.channelId)){
 				return
 			}
 
-			this.processInteraction(interaction)
+			this.withErrorReporting(interaction.channelId, interaction, async() => {
+				await this.processInteraction(interaction)
+			})
+		})
+
+		this.client.on("messageCreate", msg => {
+			this.withErrorReporting(msg.channelId, null, async() => {
+				if(!this.isChannelAllowed(msg.channelId)){
+					return
+				}
+
+				await this.processMessage(msg)
+			})
 		})
 
 		this.client.on("messageReactionAdd", async(reaction, user) => {
-			this.processReaction(reaction, user)
+			this.withErrorReporting(reaction.message.channelId, null, async() => {
+				await this.processReaction(reaction, user)
+			})
 		})
 	}
 
@@ -166,17 +195,13 @@ export class Bot {
 			return
 		}
 
-		const commandDef = commands[command.msg.command as CommandName]
-		if(!commandDef){
-			return
-		}
-
-		const reactHandler = commandDef.reacts?.[reaction.emoji.name || ""]
+		const reactHandler = command.reacts[reaction.emoji.name || ""]
 		if(!reactHandler){
 			return
 		}
 
 		const reactOpts: CommandReactHandlerOptions = {
+			channelId: reaction.message.channelId,
 			commandResult: command.reply,
 			commandMessage: command.msg,
 			reactUserId: user.id
@@ -184,8 +209,70 @@ export class Bot {
 		await Promise.resolve(reactHandler(this.context, reactOpts))
 	}
 
+	private async processMessage(message: Discord.Message): Promise<void> {
+		const msgStr = message.content
+		if(!msgStr.startsWith("!")){
+			return
+		}
+		const commandNameRaw = msgStr.split(" ")[0]!
+		const commandName = commandNameRaw.substring(1)
+		const commandDef = commands[commandName as CommandName]
+		if(!commandDef){
+			return // not our command anyway
+		}
+
+		const params = commandDef.params
+		const opts: Record<string, string | number> = {}
+		if(params){
+			const paramNames = Object.keys(params)
+			if(paramNames.length > 1){
+				// right now we just don't need them. maybe later.
+				throw new Error("Cannot process more than one param on this message")
+			}
+			const paramName = paramNames[0]
+			if(paramName){
+				const paramDef = params[paramName]!
+				const valueStr = msgStr.substring(commandNameRaw.length).trim()
+				let value: string | number
+				switch(paramDef.type){
+					case "string":
+						value = valueStr
+						break
+					case "number":
+						value = parseFloat(valueStr)
+						if(Number.isNaN(value)){
+							throw new BotError("Was expecting number as value of parameter " + paramName + ", got " + valueStr + " instead")
+						}
+						break
+				}
+				opts[paramName] = value
+			}
+		}
+
+		const attachments = [] as MessageAttachment[]
+		for(const attachment of message.attachments.values()){
+			attachments.push({
+				url: attachment.url,
+				contentType: attachment.contentType
+			})
+		}
+
+		await this.runCommand({
+			channelId: message.channelId,
+			command: commandName,
+			options: opts,
+			userId: message.author.id,
+			attachments
+		})
+	}
+
 	private async processInteraction(interaction: DefaultInteraction): Promise<void> {
-		const opts = extractOptions(interaction)
+		const opts: Record<string, string | number> = {}
+		for(const item of interaction.options.data){
+			if(typeof(item.value) === "string" || typeof(item.value) === "number"){
+				opts[item.name] = item.value
+			}
+		}
 		await this.runCommand({
 			channelId: interaction.channelId,
 			command: interaction.commandName,
@@ -200,45 +287,34 @@ export class Bot {
 			return
 		}
 
-		let reply: CommandResult
-		let replyMessage: Discord.Message
-		try {
-			reply = await Promise.resolve(def.handler(this.context, msg))
-			replyMessage = await this.replyOrSend(msg.channelId, {content: reply.reply}, interaction)
-			this.commandStorage.add(replyMessage.id, msg, reply)
-		} catch(e){
-			let errMsg: string
-			if(e instanceof BotError){
-				errMsg = e.message
-			} else {
-				errMsg = "Oh noes! Something failed UwU! We awe sowwy. Go look into logs."
-				console.error(errToString(e))
-			}
-
-			this.reportError(errMsg, msg.channelId, interaction)
-			return
-		}
+		const reply = await Promise.resolve(def.handler(this.context, msg))
+		const replyMessage = await this.replyOrSend(msg.channelId, {content: reply.reply}, interaction)
 
 		if(def.reacts && !reply.isRefuse){
-			for(const emote in def.reacts){
-				replyMessage.react(emote)
-			}
+			this.addReactsToMessage(replyMessage, msg, reply, def.reacts)
 		}
 	}
 
-	async mbSend(channelId: string, message: string | {content?: string, files?: {name: string, data: Buffer}[]} | undefined, interaction?: DefaultInteraction): Promise<void> {
+	addReactsToMessage(replyMessage: Discord.Message, messageCommand: CommandMessageProperties, reply: CommandResult, reacts: MessageReacts): void {
+		this.commandStorage.add(replyMessage.id, messageCommand, reply, reacts)
+		for(const emote in reacts){
+			replyMessage.react(emote)
+		}
+	}
+
+	async mbSend(channelId: string, message: string | {content?: string, files?: {name: string, data: Buffer}[]} | undefined, interaction?: DefaultInteraction): Promise<Discord.Message | null> {
 		const msg: {content?: string, files?: Discord.AttachmentBuilder[]} = {}
 		if(message === undefined){
-			return
+			return null
 		}
 		if(typeof(message) === "string"){
 			if(!message){
-				return
+				return null
 			}
 			msg.content = message
 		} else {
 			if(!message.content && (!message.files || message.files.length === 0)){
-				return
+				return null
 			}
 			msg.content = message.content
 			if(message.files){
@@ -247,7 +323,7 @@ export class Bot {
 				))
 			}
 		}
-		await this.replyOrSend(channelId, msg, interaction)
+		return await this.replyOrSend(channelId, msg, interaction)
 	}
 
 	private async replyOrSend(channelId: string, message: {content?: string, files?: Discord.AttachmentBuilder[]}, interaction?: DefaultInteraction): Promise<Discord.Message> {
@@ -264,6 +340,23 @@ export class Bot {
 		}
 	}
 
+	async withErrorReporting<T>(channelId: string, interaction: DefaultInteraction | null, body: () => T | Promise<T>): Promise<T> {
+		try {
+			return await body()
+		} catch(e){
+			let errMsg: string
+			if(e instanceof BotError){
+				errMsg = e.message
+			} else {
+				errMsg = "Oh noes! Something failed UwU! We awe sowwy. Go look into logs."
+				console.error(errToString(e))
+			}
+
+			this.reportError(errMsg, channelId, interaction || undefined)
+			throw e
+		}
+	}
+
 	reportError(errorMsg: string, channelId: string, interaction?: DefaultInteraction): void {
 		try {
 			this.replyOrSend(channelId, {content: errorMsg}, interaction)
@@ -273,14 +366,4 @@ export class Bot {
 		}
 	}
 
-}
-
-function extractOptions(interaction: DefaultInteraction): CommandOptionsObject {
-	const optionsObj: Record<string, string | number> = {}
-	for(const item of interaction.options.data){
-		if(typeof(item.value) === "string" || typeof(item.value) === "number"){
-			optionsObj[item.name] = item.value
-		}
-	}
-	return optionsObj
 }

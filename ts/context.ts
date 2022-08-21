@@ -4,6 +4,7 @@ import {GenRunner} from "gen_runner"
 import {Config} from "types"
 import {Bot} from "bot"
 import {Formatter} from "formatter"
+import {PictureManager} from "picture_manager"
 
 export interface AppContext {
 	readonly config: Config
@@ -12,6 +13,7 @@ export interface AppContext {
 	readonly queue: GenQueue
 	readonly bot: Bot
 	readonly formatter: Formatter
+	readonly pictureManager: PictureManager
 }
 
 export function createAppContext(config: Config, token: string): AppContext {
@@ -20,6 +22,7 @@ export function createAppContext(config: Config, token: string): AppContext {
 	let queue: GenQueue | null = null
 	let bot: Bot | null = null
 	let formatter: Formatter | null = null
+	const pictureManager = new PictureManager(config.tempPicturesDirectory, config.convertPicturesToFormat)
 	const context: AppContext = {
 		config,
 		get cmdParser() {
@@ -36,7 +39,8 @@ export function createAppContext(config: Config, token: string): AppContext {
 		},
 		get formatter() {
 			return formatter ||= new Formatter(context)
-		}
+		},
+		pictureManager
 	}
 	void context.cmdParser, context.runner, context.bot, context.formatter
 	return context

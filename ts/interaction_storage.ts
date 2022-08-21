@@ -1,10 +1,11 @@
-import {CommandMessageProperties, CommandResult} from "bot"
+import {CommandMessageProperties, CommandResult, MessageReacts} from "bot"
 import {MapQueue} from "map_queue"
 
 interface StoredInteraction {
 	readonly msg: CommandMessageProperties
 	readonly timeAdded: number
 	readonly reply: CommandResult
+	readonly reacts: MessageReacts
 }
 
 export class InteractionStorage {
@@ -12,8 +13,8 @@ export class InteractionStorage {
 
 	constructor(private readonly timeoutSeconds: number) {}
 
-	add(id: string, msg: CommandMessageProperties, reply: CommandResult): void {
-		this.queue.enqueue(id, {msg, reply, timeAdded: Date.now()})
+	add(id: string, msg: CommandMessageProperties, reply: CommandResult, reacts: MessageReacts): void {
+		this.queue.enqueue(id, {msg, reply, timeAdded: Date.now(), reacts})
 		this.cleanup()
 	}
 

@@ -11,12 +11,15 @@ export interface Config {
 	 * https://discord.com/developers/applications/<your_bot_id>/oauth2/general */
 	readonly clientID: string
 	readonly guildID: string
-	readonly params: GenParamDescription[]
+	readonly channelID?: readonly string[]
+	readonly params: readonly GenParamDescription[]
 	readonly commandTemplate: string
 	readonly promptCutoffLimitInDisplay?: number
 	readonly deleteFiledAfterUpload?: boolean
 	readonly maxWordCountInPrompt?: number
 	readonly reactionWaitingTimeSeconds?: number
+	readonly tempPicturesDirectory: string
+	readonly convertPicturesToFormat?: string
 	readonly text?: ROOptDeep<{
 		dream: {
 			description: string
@@ -75,11 +78,13 @@ export interface GenTaskInput {
 	readonly rawParamString: string
 	readonly userId: string
 	readonly paramsPassedByHuman: readonly string[]
+	readonly originalKeyValuePairs: readonly [key: string, value: GenParamValue][]
 	readonly params: GenParamValuesObject
 	readonly id: number
 	readonly channelId: string
 	readonly droppedPromptWordsCount: number
 	readonly isPrivate: boolean
+	readonly inputImages: readonly string[]
 }
 
 export interface GenTask extends GenTaskInput {

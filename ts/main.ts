@@ -7,6 +7,7 @@ export async function main(): Promise<void> {
 		const token = (await Fs.readFile("./token.txt", "utf-8")).replace(/[\s\n\r\t]/g, "")
 		const config: Config = JSON.parse(await Fs.readFile("./config.json", "utf-8"))
 		const context = createAppContext(config, token)
+		await context.pictureManager.init()
 		await context.bot.start()
 		console.error("Bot started and ready to serve!")
 	} catch(e){

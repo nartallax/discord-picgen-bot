@@ -1,6 +1,7 @@
 import {CommandMessageProperties} from "bot"
 import {BotError} from "bot_error"
 import {AppContext} from "context"
+import {httpGet} from "http_utils"
 import {GenParamDescription, GenParamValue, GenParamValuesObject, GenTaskInput} from "types"
 
 let taskIdCounter = 0
@@ -13,7 +14,7 @@ export class GenParamParser {
 
 	constructor(private readonly context: AppContext) {
 		for(const def of context.config.params){
-			const keys = allKeysOf(def)
+			const keys = allKeysOfGenParam(def)
 			for(const key of keys){
 				this.registerParam(key, def)
 			}
@@ -30,19 +31,32 @@ export class GenParamParser {
 		this.genParams.set(key, def)
 	}
 
-	parse(paramStr: string, msg: CommandMessageProperties): GenTaskInput {
+	async parse(paramStr: string, msg: CommandMessageProperties): Promise<GenTaskInput> {
 		const {prompt: rawPrompt, paramsArr} = this.split(paramStr)
-		const params = this.parseParams(paramsArr)
+		const [params, originalKeyValuePairs] = this.parseParams(paramsArr)
 		const [prompt, droppedWords] = this.dropExcessWords(rawPrompt)
 
+		const inputImages = await this.loadInputImages(msg)
 		const paramsPassedByHuman = Object.keys(params)
 		this.checkAndUseDefaults(params)
 		const isPrivate = !this.privateParamName ? false : !!params[this.privateParamName]
-		const result: GenTaskInput = {prompt, params, id: 0, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate}
+		const result: GenTaskInput = {prompt, params, id: 0, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate, originalKeyValuePairs, inputImages}
 
 		this.lastQueryByUser.set(result.userId, result)
 
 		return this.makeNew(result)
+	}
+
+	private async loadInputImages(msg: CommandMessageProperties): Promise<string[]> {
+		return await Promise.all((msg.attachments || []).map(async attachment => {
+			if(!attachment.contentType?.startsWith("image/")){
+				throw new BotError("One of the attachments are not picture; can't process.")
+			}
+			const data = await httpGet(attachment.url)
+			const storedImage = await this.context.pictureManager.storeImage(attachment.contentType, data)
+			return storedImage
+		}))
+
 	}
 
 	getLastQueryOfUser(userId: string): GenTaskInput | undefined {
@@ -90,7 +104,8 @@ export class GenParamParser {
 		return {prompt: promptParts.join(" "), paramsArr: paramParts}
 	}
 
-	private parseParams(params: readonly string[]): GenParamValuesObject {
+	private parseParams(params: readonly string[]): [GenParamValuesObject, [key: string, value: GenParamValue][]] {
+		const originalKeyValuePairs = [] as [key: string, value: GenParamValue][]
 		const usedParams = new Set<GenParamDescription>()
 		const result = {} as GenParamValuesObject
 		for(let i = 0; i < params.length; i++){
@@ -135,10 +150,11 @@ export class GenParamParser {
 						break
 				}
 			}
+			originalKeyValuePairs.push([key, value])
 			result[def.jsonName] = value
 		}
 
-		return result
+		return [result, originalKeyValuePairs]
 	}
 
 	private checkAndUseDefaults(params: GenParamValuesObject): void {
@@ -155,7 +171,7 @@ export class GenParamParser {
 				continue
 			}
 
-			const keyString = allKeysOf(def).join(" / ")
+			const keyString = allKeysOfGenParam(def).join(" / ")
 			throw new BotError(`No value is provided for parameter ${keyString}, and it has no default. Cannot continue without this value.`)
 		}
 	}
@@ -191,7 +207,7 @@ function visibleKeysOf(def: GenParamDescription): readonly string[] {
 	return typeof(def.key) === "string" ? [def.key] : def.key
 }
 
-function allKeysOf(def: GenParamDescription): string[] {
+export function allKeysOfGenParam(def: GenParamDescription): string[] {
 	return [
 		...visibleKeysOf(def),
 		...(def.keyHidden === undefined ? [] : typeof(def.keyHidden) === "string" ? [def.keyHidden] : def.keyHidden)

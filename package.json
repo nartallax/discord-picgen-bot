@@ -23,6 +23,7 @@
     "@discordjs/rest": "^1.0.1",
     "@types/shell-quote": "^1.7.1",
     "discord.js": "^14.2.0",
+    "jimp": "^0.16.1",
     "shell-quote": "^1.7.3"
   }
 }

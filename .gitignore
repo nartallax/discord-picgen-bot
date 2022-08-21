@@ -4,3 +4,4 @@ target
 js
 resulting_picture_example.png
 .DS_store
+tmp_pictures

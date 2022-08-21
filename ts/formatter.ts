@@ -1,15 +1,25 @@
 import {CommandMessageProperties} from "bot"
 import {AppContext} from "context"
+import {allKeysOfGenParam} from "input_parser"
 import {Config, GenParamDescription, GenTask} from "types"
 
 type DropUndef<T> = T extends undefined ? never : T
 
 export class Formatter {
 	private readonly paramMap: Map<string, GenParamDescription>
+	private readonly keyToJsonNameMap: Map<string, string>
 	private readonly t: DropUndef<Config["text"]>
 
 	constructor(private readonly context: AppContext) {
 		this.paramMap = new Map(this.context.config.params.map(x => [x.jsonName, x]))
+
+		this.keyToJsonNameMap = new Map()
+		this.context.config.params.forEach(def => {
+			allKeysOfGenParam(def).forEach(key => {
+				this.keyToJsonNameMap.set(key, def.jsonName)
+			})
+		})
+
 		this.t = context.config.text || {}
 	}
 
@@ -179,6 +189,7 @@ export class Formatter {
 			PICTURES_GENERATED: (task.generatedPictures || 0) + "",
 			PARAMS_NICE: this.paramsToNiceString(task, true),
 			PARAMS_NICE_FULL: this.paramsToNiceString(task, false),
+			PARAMS_BY_KEYS_NICE: this.origParamsWithKeysToNiceString(task),
 			USER: `<@${task.userId}>`,
 			PROMPT: task.prompt,
 			PROMPT_SHORT: shortPrompt,
@@ -201,10 +212,7 @@ export class Formatter {
 	}
 
 	private paramsToNiceString(task: GenTask, onlyUserPassed: boolean): string {
-		const allowedParamNames = onlyUserPassed
-			? task.paramsPassedByHuman
-			: this.context.config.params.map(x => x.jsonName)
-		const result = allowedParamNames.map(name => {
+		const result = this.jsonNamesOfTaskParams(task, onlyUserPassed).map(name => {
 			const def = this.paramMap.get(name)
 			if(!def){
 				return null
@@ -213,6 +221,22 @@ export class Formatter {
 			return (def.humanName || def.jsonName) + ": " + value
 		}).filter(x => !!x).join("\n")
 		return result
+	}
+
+	private origParamsWithKeysToNiceString(task: GenTask): string {
+		return task.originalKeyValuePairs.map(([key, value]) => {
+			if(value === true){
+				return key
+			} else {
+				return key + " " + value
+			}
+		}).join("\n")
+	}
+
+	private jsonNamesOfTaskParams(task: GenTask, onlyUserPassed: boolean): readonly string[] {
+		return onlyUserPassed
+			? task.paramsPassedByHuman
+			: this.context.config.params.map(x => x.jsonName)
 	}
 
 	private format(template: string | undefined, params: {readonly [k: string]: string}): string | undefined {
