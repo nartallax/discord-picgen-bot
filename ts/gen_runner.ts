@@ -8,7 +8,7 @@ import {promises as Fs} from "fs"
 import {AppContext} from "context"
 import {errToString, isEnoent} from "utils"
 import {GenTask} from "types"
-import {displayQueueReact} from "bot_commands"
+import {displayQueueReact, reDreamReact} from "bot_commands"
 
 type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine
 
@@ -131,16 +131,14 @@ export class GenRunner {
 		if(message){
 			this.context.bot.addReactsToMessage(
 				message,
-				{
-					channelId: message.channelId,
-					command: "fake_command",
-					options: {},
-					userId: task.userId
-				},
+				task.command,
 				{
 					reply: replyStr
 				},
-				displayQueueReact
+				{
+					...displayQueueReact,
+					...reDreamReact
+				}
 			)
 		}
 
@@ -183,12 +181,12 @@ export class GenRunner {
 		})
 	}
 
-	private makeCommand(input: GenTask): {bin: string, params: readonly string[], inputJson: string} {
+	private makeCommand(task: GenTask): {bin: string, params: readonly string[], inputJson: string} {
 		const json = JSON.stringify({
-			prompt: input.prompt,
-			...input.params,
-			paramsPassedByHuman: input.paramsPassedByHuman,
-			inputPictures: input.inputImages
+			prompt: task.prompt,
+			...task.params,
+			paramsPassedByHuman: task.paramsPassedByHuman,
+			inputPictures: task.inputImages
 		})
 		const entries = ShellQuote.parse(this.context.config.commandTemplate, {
 			INPUT_JSON: json
@@ -196,12 +194,12 @@ export class GenRunner {
 
 		for(const entry of entries){
 			if(typeof(entry) !== "string"){
-				throw new BotError("Bad configuration: weird generation command template. Some part of it parsed as " + JSON.stringify(entry) + ", and I don't know how to launch that.")
+				throw new BotError(this.context.formatter.errorBadConfigLaunchCommandTooComplex(JSON.stringify(entry), task))
 			}
 		}
 
 		if(entries.length === 0){
-			throw new BotError("Bad configuration: weird generation command template. Expected to have at least one command part.")
+			throw new BotError(this.context.formatter.errorBadConfigNoCommandParts(task))
 		}
 
 		const bin = entries[0] as string

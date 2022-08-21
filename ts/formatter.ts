@@ -4,6 +4,10 @@ import {allKeysOfGenParam} from "input_parser"
 import {Config, GenParamDescription, GenTask} from "types"
 
 type DropUndef<T> = T extends undefined ? never : T
+type CommandPropsShort = {
+	userId: CommandMessageProperties["userId"]
+	command?: CommandMessageProperties["command"]
+}
 
 export class Formatter {
 	private readonly paramMap: Map<string, GenParamDescription>
@@ -47,7 +51,7 @@ export class Formatter {
 		return this.format(this.select(task, this.t.dream?.promptWordsDroppedOnTaskCreation), this.makeTaskParams(task))
 	}
 
-	dreamNoParams(cmd: CommandMessageProperties): string | undefined {
+	dreamNoParams(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.dream?.noParams, this.makeCommandParams(cmd))
 	}
 
@@ -59,67 +63,67 @@ export class Formatter {
 		return this.format(this.select(task, this.t.status?.queuedTask), this.makeTaskParams(task))
 	}
 
-	statusRunningTaskPrefix(cmd: CommandMessageProperties): string | undefined {
+	statusRunningTaskPrefix(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.status?.runningTasksPrefix, this.makeCommandParams(cmd))
 	}
 
-	statusQueuedTaskPrefix(cmd: CommandMessageProperties): string | undefined {
+	statusQueuedTaskPrefix(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.status?.queuedTasksPrefix, this.makeCommandParams(cmd))
 	}
 
-	statusNoTasks(cmd: CommandMessageProperties): string | undefined {
+	statusNoTasks(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.status?.noTasks, this.makeCommandParams(cmd))
 	}
 
-	dropNoTaskId(cmd: CommandMessageProperties): string | undefined {
+	dropNoTaskId(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.drop?.noTaskId, this.makeCommandParams(cmd))
 	}
 
-	dropKilledRunningTask(cmd: CommandMessageProperties, task: GenTask): string | undefined {
+	dropKilledRunningTask(cmd: CommandPropsShort, task: GenTask): string | undefined {
 		return this.format(this.select(task, this.t.drop?.killedRunningTask), {
 			...this.makeCommandParams(cmd),
 			...this.makeTaskParams(task)
 		})
 	}
 
-	dropDequeuedTask(cmd: CommandMessageProperties, task: GenTask): string | undefined {
+	dropDequeuedTask(cmd: CommandPropsShort, task: GenTask): string | undefined {
 		return this.format(this.select(task, this.t.drop?.dequeuedTask), {
 			...this.makeCommandParams(cmd),
 			...this.makeTaskParams(task)
 		})
 	}
 
-	dropTaskNotFound(cmd: CommandMessageProperties, taskId: number): string | undefined {
+	dropTaskNotFound(cmd: CommandPropsShort, taskId: number): string | undefined {
 		return this.format(this.t.drop?.taskNotFound, {
 			...this.makeCommandParams(cmd),
 			TASK_ID: taskId + ""
 		})
 	}
 
-	dreamhelpHeader(cmd: CommandMessageProperties): string | undefined {
+	dreamhelpHeader(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.dreamhelp?.header, this.makeCommandParams(cmd))
 	}
 
-	purgeCompleted(cmd: CommandMessageProperties): string | undefined {
+	purgeCompleted(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.purge?.completed, this.makeCommandParams(cmd))
 	}
 
-	clearCompleted(cmd: CommandMessageProperties): string | undefined {
+	clearCompleted(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.clear?.completed, this.makeCommandParams(cmd))
 	}
 
-	killSuccess(cmd: CommandMessageProperties, task: GenTask): string | undefined {
+	killSuccess(cmd: CommandPropsShort, task: GenTask): string | undefined {
 		return this.format(this.select(task, this.t.kill?.success), {
 			...this.makeCommandParams(cmd),
 			...this.makeTaskParams(task)
 		})
 	}
 
-	killTaskNotFound(cmd: CommandMessageProperties): string | undefined {
+	killTaskNotFound(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.kill?.taskNotFound, this.makeCommandParams(cmd))
 	}
 
-	dreamrepeatNoPreviousFound(cmd: CommandMessageProperties): string | undefined {
+	dreamrepeatNoPreviousFound(cmd: CommandPropsShort): string | undefined {
 		return this.format(this.t.dreamrepeat?.noPreviousFound, this.makeCommandParams(cmd))
 	}
 
@@ -163,6 +167,102 @@ export class Formatter {
 		return this.t.drop?.taskIdDescription
 	}
 
+	errorParamNotNumber(paramName: string, paramValue: string, command: CommandPropsShort): string {
+		return this.format(
+			this.t.errors?.paramNotNumber || "Was expecting number as value of parameter $PARAM_NAME, got $PARAM_VALUE instead",
+			{
+				...this.makeCommandParams(command),
+				PARAM_KEY: paramName,
+				PARAM_VALUE: paramValue
+			}
+		)
+	}
+
+	errorBadConfigLaunchCommandTooComplex(partJson: string, task: GenTask): string {
+		return this.format(
+			this.t.errors?.badConfigLaunchCommandTooComplex || "Bad configuration: weird generation command template. Some part of it parsed as $PART_JSON, and I don't know how to launch that.",
+			{
+				...this.makeTaskParams(task),
+				PART_JSON: partJson
+			}
+		)
+	}
+
+	errorBadConfigNoCommandParts(task: GenTask): string {
+		return this.format(
+			this.t.errors?.badConfigNoCommandParts || "Bad configuration: weird generation command template. Expected to have at least one command part.",
+			this.makeTaskParams(task)
+		)
+	}
+
+	errorAttachmentNotPicture(command: CommandPropsShort): string {
+		return this.format(
+			this.t.errors?.attachmentNotPicture || "One of the attachments is not picture; can't process.",
+			this.makeCommandParams(command)
+		)
+	}
+
+	errorDuplicateParamPassed(paramKey: string, command: CommandPropsShort): string {
+		return this.format(
+			this.t.errors?.duplicateParamPassed || "One of parameters is defined twice, last time with key $PARAM_KEY",
+			{
+				...this.makeCommandParams(command),
+				PARAM_KEY: paramKey
+			}
+		)
+	}
+
+	errorNoValueAfterParam(paramKey: string, command: CommandPropsShort): string {
+		return this.format(
+			this.t.errors?.noValueAfterParam || "Expected a value after key $PARAM_KEY",
+			{
+				...this.makeCommandParams(command),
+				PARAM_KEY: paramKey
+			}
+		)
+	}
+	errorParamNotInteger(paramKey: string, paramValue: string, command: CommandPropsShort): string {
+		return this.format(
+			this.t.errors?.paramNotInteger || "Expected integer number value after key $PARAM_KEY, but this value has fractional part: $PARAM_VALUE",
+			{
+				...this.makeCommandParams(command),
+				PARAM_KEY: paramKey,
+				PARAM_VALUE: paramValue
+			}
+		)
+	}
+
+	errorParamNotInAllowedList(paramKey: string, paramValue: string, command: CommandPropsShort): string {
+		return this.format(
+			this.t.errors?.paramNotInAllowedList || "Value $PARAM_VALUE is not one of allowed values of parameter $PARAM_KEY.",
+			{
+				...this.makeCommandParams(command),
+				PARAM_KEY: paramKey,
+				PARAM_VALUE: paramValue
+			}
+		)
+	}
+
+	errorRequiredParamNotPassed(paramKey: string, command: CommandPropsShort): string {
+		return this.format(
+			this.t.errors?.requiredParamNotPassed || "No value is provided for parameter $PARAM_KEY, and it has no default. Cannot continue without this value.",
+			{
+				...this.makeCommandParams(command),
+				PARAM_KEY: paramKey
+			}
+		)
+	}
+
+	errorUnknownParam(paramKey: string, command: CommandPropsShort): string {
+		return this.format(
+			this.t.errors?.unknownParam || "No param is defined for key $PARAM_KEY",
+			{
+				...this.makeCommandParams(command),
+				PARAM_KEY: paramKey
+			}
+		)
+	}
+
 	private outputPictureFormat(template: string | undefined, task: GenTask, fileName: string): string | undefined {
 		return this.format(template, {
 			...this.makeTaskParams(task),
@@ -170,9 +270,9 @@ export class Formatter {
 		})
 	}
 
-	private makeCommandParams(command: CommandMessageProperties): {readonly [k: string]: string} {
+	private makeCommandParams(command: CommandPropsShort): {readonly [k: string]: string} {
 		return {
-			COMMAND: command.command,
+			COMMAND: command.command || "???",
 			USER: `<@${command.userId}>`
 		}
 	}
@@ -239,6 +339,8 @@ export class Formatter {
 			: this.context.config.params.map(x => x.jsonName)
 	}
 
+	private format(template: string, params: {readonly [k: string]: string}): string
+	private format(template: string | undefined, params: {readonly [k: string]: string}): string | undefined
 	private format(template: string | undefined, params: {readonly [k: string]: string}): string | undefined {
 		if(!template){
 			return undefined

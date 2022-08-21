@@ -1,3 +1,4 @@
+import {CommandMessageProperties} from "bot"
 import * as ChildProcess from "child_process"
 import * as Stream from "stream"
 
@@ -21,6 +22,18 @@ export interface Config {
 	readonly tempPicturesDirectory: string
 	readonly convertPicturesToFormat?: string
 	readonly text?: ROOptDeep<{
+		errors: {
+			paramNotNumber: string
+			badConfigLaunchCommandTooComplex: string
+			badConfigNoCommandParts: string
+			unknownParam: string
+			attachmentNotPicture: string
+			duplicateParamPassed: string
+			noValueAfterParam: string
+			paramNotInteger: string
+			paramNotInAllowedList: string
+			requiredParamNotPassed: string
+		}
 		dream: {
 			description: string
 			paramDescription: string
@@ -85,6 +98,7 @@ export interface GenTaskInput {
 	readonly droppedPromptWordsCount: number
 	readonly isPrivate: boolean
 	readonly inputImages: readonly string[]
+	readonly command: CommandMessageProperties
 }
 
 export interface GenTask extends GenTaskInput {

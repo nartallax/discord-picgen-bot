@@ -241,7 +241,7 @@ export class Bot {
 					case "number":
 						value = parseFloat(valueStr)
 						if(Number.isNaN(value)){
-							throw new BotError("Was expecting number as value of parameter " + paramName + ", got " + valueStr + " instead")
+							throw new BotError(this.context.formatter.errorParamNotNumber(paramName, valueStr, {userId: message.author.id}))
 						}
 						break
 				}
@@ -340,9 +340,9 @@ export class Bot {
 		}
 	}
 
-	async withErrorReporting<T>(channelId: string, interaction: DefaultInteraction | null, body: () => T | Promise<T>): Promise<T> {
+	async withErrorReporting(channelId: string, interaction: DefaultInteraction | null, body: () => void | Promise<void>): Promise<void> {
 		try {
-			return await body()
+			await body()
 		} catch(e){
 			let errMsg: string
 			if(e instanceof BotError){
@@ -353,7 +353,6 @@ export class Bot {
 			}
 
 			this.reportError(errMsg, channelId, interaction || undefined)
-			throw e
 		}
 	}
 

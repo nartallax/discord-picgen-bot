@@ -10,6 +10,18 @@
 	"tempPicturesDirectory": "./tmp_pictures",
 	"convertPicturesToFormat": "jpg",
 	"text": {
+		"errors": {
+			"badConfigLaunchCommandTooComplex": "Bad configuration: weird generation command template. Some part of it parsed as $PART_JSON, and I don't know how to launch that.",
+			"badConfigNoCommandParts": "Bad configuration: weird generation command template. Expected to have at least one command part.",
+			"paramNotNumber": "Was expecting number as value of parameter $PARAM_KEY, got $PARAM_VALUE instead",
+			"attachmentNotPicture": "One of the attachments is not picture; can't process.",
+			"duplicateParamPassed": "One of parameters is passed twice, last time with key $PARAM_KEY",
+			"unknownParam": "No param is defined for key $PARAM_KEY",
+			"noValueAfterParam": "Expected a value after key $PARAM_KEY",
+			"paramNotInteger": "Expected integer number value after key $PARAM_KEY, but this value has fractional part: $PARAM_VALUE",
+			"paramNotInAllowedList": "Value $PARAM_VALUE is not one of allowed values of parameter $PARAM_KEY.",
+			"requiredParamNotPassed": "No value is provided for parameter $PARAM_KEY, and it has no default. Cannot continue without this value."
+		},
 		"dream": {
 			"description": "Generate a picture by parameters",
 			"paramDescription": "Prompt and other parameters of generation",

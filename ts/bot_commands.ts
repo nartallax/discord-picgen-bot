@@ -23,6 +23,17 @@ export const displayQueueReact: MessageReacts = {
 	}
 }
 
+export const reDreamReact: MessageReacts = {
+	"🔁": (context, react) => {
+		context.bot.runCommand({
+			command: "dream",
+			options: react.commandMessage.options,
+			channelId: react.channelId,
+			userId: react.reactUserId
+		})
+	}
+}
+
 const _commands = {
 	lenny: cmd({
 		description: () => "( ͡° ͜ʖ ͡°)",
@@ -61,12 +72,6 @@ const _commands = {
 			}
 		},
 		reacts: {
-			"🔁": (context, react) => {
-				context.bot.runCommand({
-					...react.commandMessage,
-					userId: react.reactUserId
-				})
-			},
 			"🔪": (context, react) => {
 				const taskId = (react.commandResult as StartGenResult).taskId
 				if(taskId){
@@ -88,7 +93,7 @@ const _commands = {
 					isRefuse: true
 				}
 			}
-			const task = await context.cmdParser.parse(paramsStr, command)
+			const task = await context.cmdParser.parse(command, paramsStr, command)
 			return startGen(context, task)
 		}
 	}),

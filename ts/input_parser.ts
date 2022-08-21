@@ -31,16 +31,16 @@ export class GenParamParser {
 		this.genParams.set(key, def)
 	}
 
-	async parse(paramStr: string, msg: CommandMessageProperties): Promise<GenTaskInput> {
+	async parse(command: CommandMessageProperties, paramStr: string, msg: CommandMessageProperties): Promise<GenTaskInput> {
 		const {prompt: rawPrompt, paramsArr} = this.split(paramStr)
-		const [params, originalKeyValuePairs] = this.parseParams(paramsArr)
+		const [params, originalKeyValuePairs] = this.parseParams(paramsArr, command)
 		const [prompt, droppedWords] = this.dropExcessWords(rawPrompt)
 
 		const inputImages = await this.loadInputImages(msg)
 		const paramsPassedByHuman = Object.keys(params)
-		this.checkAndUseDefaults(params)
+		this.checkAndUseDefaults(params, command)
 		const isPrivate = !this.privateParamName ? false : !!params[this.privateParamName]
-		const result: GenTaskInput = {prompt, params, id: 0, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate, originalKeyValuePairs, inputImages}
+		const result: GenTaskInput = {prompt, params, id: 0, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate, originalKeyValuePairs, inputImages, command}
 
 		this.lastQueryByUser.set(result.userId, result)
 
@@ -50,7 +50,7 @@ export class GenParamParser {
 	private async loadInputImages(msg: CommandMessageProperties): Promise<string[]> {
 		return await Promise.all((msg.attachments || []).map(async attachment => {
 			if(!attachment.contentType?.startsWith("image/")){
-				throw new BotError("One of the attachments are not picture; can't process.")
+				throw new BotError(this.context.formatter.errorAttachmentNotPicture(msg))
 			}
 			const data = await httpGet(attachment.url)
 			const storedImage = await this.context.pictureManager.storeImage(attachment.contentType, data)
@@ -104,7 +104,7 @@ export class GenParamParser {
 		return {prompt: promptParts.join(" "), paramsArr: paramParts}
 	}
 
-	private parseParams(params: readonly string[]): [GenParamValuesObject, [key: string, value: GenParamValue][]] {
+	private parseParams(params: readonly string[], command: CommandMessageProperties): [GenParamValuesObject, [key: string, value: GenParamValue][]] {
 		const originalKeyValuePairs = [] as [key: string, value: GenParamValue][]
 		const usedParams = new Set<GenParamDescription>()
 		const result = {} as GenParamValuesObject
@@ -112,11 +112,10 @@ export class GenParamParser {
 			const key = params[i]!
 			const def = this.genParams.get(key)
 			if(!def){
-				// should never happen
-				throw new BotError("No param is defined for key " + key)
+				throw new BotError(this.context.formatter.errorUnknownParam(key, command))
 			}
 			if(usedParams.has(def)){
-				throw new BotError("One of parameters is defined twice, last time with key " + key)
+				throw new BotError(this.context.formatter.errorDuplicateParamPassed(key, command))
 			}
 
 			let value: GenParamValue
@@ -125,7 +124,7 @@ export class GenParamParser {
 			} else {
 				const rawValue = params[++i]
 				if(typeof(rawValue) !== "string"){
-					throw new BotError("Expected a value after key " + key)
+					throw new BotError(this.context.formatter.errorNoValueAfterParam(key, command))
 				}
 
 				switch(def.type){
@@ -136,16 +135,16 @@ export class GenParamParser {
 					case "int":
 						value = parseFloat(rawValue)
 						if(Number.isNaN(value) || !Number.isFinite(value)){
-							throw new BotError(`Expected some numeric value after key ${key}, got something else instead: "${rawValue}"`)
+							throw new BotError(this.context.formatter.errorParamNotNumber(key, rawValue, command))
 						}
 						if(def.type === "int" && !Number.isInteger(value)){
-							throw new BotError(`Expected integer number value after key ${key}, but this value has fractional part: "${rawValue}"`)
+							throw new BotError(this.context.formatter.errorParamNotInteger(key, rawValue, command))
 						}
 						break
 					case "enum":
 						value = rawValue
 						if(!def.allowedValues.find(x => x === value)){
-							throw new BotError(`Value ${value} is not one of allowed values of parameter ${key}.`)
+							throw new BotError(this.context.formatter.errorParamNotInAllowedList(key, rawValue, command))
 						}
 						break
 				}
@@ -157,7 +156,7 @@ export class GenParamParser {
 		return [result, originalKeyValuePairs]
 	}
 
-	private checkAndUseDefaults(params: GenParamValuesObject): void {
+	private checkAndUseDefaults(params: GenParamValuesObject, command: CommandMessageProperties): void {
 		for(const def of new Set([...this.genParams.values()])){
 			if(def.jsonName in params){
 				continue
@@ -172,7 +171,7 @@ export class GenParamParser {
 			}
 
 			const keyString = allKeysOfGenParam(def).join(" / ")
-			throw new BotError(`No value is provided for parameter ${keyString}, and it has no default. Cannot continue without this value.`)
+			throw new BotError(this.context.formatter.errorRequiredParamNotPassed(keyString, command))
 		}
 	}
 
