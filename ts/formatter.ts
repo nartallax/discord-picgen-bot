@@ -2,6 +2,7 @@ import {CommandMessageProperties} from "bot"
 import {AppContext} from "context"
 import {allKeysOfGenParam} from "input_parser"
 import {Config, GenParamDescription, GenTask} from "types"
+import {toFixedNoTrailingZeroes} from "utils"
 
 type DropUndef<T> = T extends undefined ? never : T
 type CommandPropsShort = {
@@ -261,6 +262,28 @@ export class Formatter {
 				PARAM_KEY: paramKey
 			}
 		)
+	}
+
+	errorPictureTooLarge(size: number, task: GenTask): string {
+		return this.format(
+			this.t.errors?.pictureTooLarge || "Cannot upload picture $PICTURES_GENERATED / $PICTURES_EXPECTED: it is too large ($IMAGE_SIZE)",
+			{
+				...this.makeTaskParams(task),
+				IMAGE_SIZE: this.formatFileSize(size)
+			}
+		)
+	}
+
+	private formatFileSize(size: number): string {
+		if(size < 1024){
+			return size + "b"
+		}
+		size /= 1024
+		if(size < 1024){
+			return toFixedNoTrailingZeroes(size, 2) + "kb"
+		}
+		size /= 1024
+		return toFixedNoTrailingZeroes(size, 2) + "mb"
 	}
 
 	private outputPictureFormat(template: string | undefined, task: GenTask, fileName: string): string | undefined {

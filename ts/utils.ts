@@ -36,3 +36,7 @@ export async function dirExists(path: string): Promise<boolean> {
 		throw e
 	}
 }
+
+export function toFixedNoTrailingZeroes(num: number, positions: number): string {
+	return num.toFixed(positions).replace(/\.?0+$/, "")
+}

@@ -3,5 +3,6 @@ token.txt
 target
 js
 resulting_picture_example.png
+resulting_picture_example_huge.png
 .DS_store
 tmp_pictures

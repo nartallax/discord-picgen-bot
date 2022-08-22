@@ -33,6 +33,7 @@ export interface Config {
 			paramNotInteger: string
 			paramNotInAllowedList: string
 			requiredParamNotPassed: string
+			pictureTooLarge: string
 		}
 		dream: {
 			description: string

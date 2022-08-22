@@ -327,16 +327,11 @@ export class Bot {
 	}
 
 	private async replyOrSend(channelId: string, message: {content?: string, files?: Discord.AttachmentBuilder[]}, interaction?: DefaultInteraction): Promise<Discord.Message> {
-		try {
-			if(interaction && !interaction.replied){
-				return await interaction.reply({...message, fetchReply: true})
-			} else {
-				const channel = interaction?.channel || this.getTextChannel(channelId)
-				return await channel.send(message)
-			}
-		} catch(e){
-			this.reportError(errToString(e), channelId, interaction)
-			throw e
+		if(interaction && !interaction.replied){
+			return await interaction.reply({...message, fetchReply: true})
+		} else {
+			const channel = interaction?.channel || this.getTextChannel(channelId)
+			return await channel.send(message)
 		}
 	}
 

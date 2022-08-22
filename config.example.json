@@ -20,7 +20,8 @@
 			"noValueAfterParam": "Expected a value after key $PARAM_KEY",
 			"paramNotInteger": "Expected integer number value after key $PARAM_KEY, but this value has fractional part: $PARAM_VALUE",
 			"paramNotInAllowedList": "Value $PARAM_VALUE is not one of allowed values of parameter $PARAM_KEY.",
-			"requiredParamNotPassed": "No value is provided for parameter $PARAM_KEY, and it has no default. Cannot continue without this value."
+			"requiredParamNotPassed": "No value is provided for parameter $PARAM_KEY, and it has no default. Cannot continue without this value.",
+			"pictureTooLarge": "Cannot upload picture $PICTURES_GENERATED / $PICTURES_EXPECTED for task #$TASK_ID: it is too large ($IMAGE_SIZE)"
 		},
 		"dream": {
 			"description": "Generate a picture by parameters",
