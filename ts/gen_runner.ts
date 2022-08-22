@@ -7,10 +7,15 @@ import * as Discord from "discord.js"
 import {promises as Fs} from "fs"
 import {AppContext} from "context"
 import {errToString, isEnoent} from "utils"
-import {GenTask} from "types"
-import {displayQueueReact, reDreamReact} from "bot_commands"
+import {GenTask, GenTaskInput, stripNonSerializableDataFromTask} from "types"
+import {displayQueueReact, reDreamReact, saveMessageReact} from "bot_commands"
+import {CommandResult} from "bot"
 
 type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine
+
+export type TaskCommandResult = CommandResult & {
+	task: GenTaskInput
+}
 
 interface GeneratedFileLine {
 	generatedPicture: string
@@ -85,13 +90,21 @@ export class GenRunner {
 				...task,
 				generatedPictures: pictureIndex
 			}, line.generatedPicture)
-			await this.context.bot.mbSend(
+			const message = await this.context.bot.mbSend(
 				task.channelId,
 				{
 					content: pictureGeneratedText,
 					files: [{name: Path.basename(line.generatedPicture), data: content}]
 				}
 			)
+			if(message && this.context.config.savedPropmtsChannelID){
+				this.context.bot.addReactsToMessage(
+					message,
+					task.command,
+					this.getFakeCommandResult(task, pictureGeneratedText),
+					saveMessageReact
+				)
+			}
 		} catch(e){
 			if(e instanceof Discord.DiscordAPIError && (e.code + "") === "40005"){
 				const pictureTooLargeText = this.context.formatter.errorPictureTooLarge(content.length, {
@@ -139,6 +152,13 @@ export class GenRunner {
 		await exitPromise
 	}
 
+	private getFakeCommandResult(task: GenTask, reply?: string): TaskCommandResult {
+		return {
+			task: stripNonSerializableDataFromTask(task),
+			reply
+		}
+	}
+
 	private async onTaskCompleted(task: GenTask): Promise<void> {
 		const replyStr = this.context.formatter.dreamGenerationCompleted(task)
 		const message = await this.sendTaskMessage(task, replyStr)
@@ -146,9 +166,7 @@ export class GenRunner {
 			this.context.bot.addReactsToMessage(
 				message,
 				task.command,
-				{
-					reply: replyStr
-				},
+				this.getFakeCommandResult(task, replyStr),
 				{
 					...displayQueueReact,
 					...reDreamReact

@@ -1,5 +1,7 @@
 import {CommandDef, CommandResult, MessageReacts} from "bot"
 import {AppContext} from "context"
+import {TaskCommandResult} from "gen_runner"
+import {httpGet} from "http_utils"
 import {GenTask} from "types"
 
 type StartGenResult = CommandResult & {taskId?: number}
@@ -19,6 +21,37 @@ export const displayQueueReact: MessageReacts = {
 			command: "status",
 			options: {},
 			userId: reaction.reactUserId
+		})
+	}
+}
+
+export const saveMessageReact: MessageReacts = {
+	"💾": async(context, reaction) => {
+		const saveChannelId = context.config.savedPropmtsChannelID
+		if(!saveChannelId){
+			throw new Error("Cannot save stuff: no save channel id is provided.")
+		}
+
+		const msg = context.bot.getMessage(reaction.channelId, reaction.messageId)
+		const files: {name: string, data: Buffer}[] = []
+		if(msg){
+			let i = 0
+			for(const attachment of msg.attachments.values()){
+				++i
+				const fileContent = await httpGet(attachment.url)
+				const fileName = attachment.name
+					? attachment.name
+					: attachment.contentType
+						? i + "." + attachment.contentType.replace(/^.*?\//, "")
+						: "unknown_file"
+				files.push({data: fileContent, name: fileName})
+			}
+		}
+
+		const cmdResult = reaction.commandResult as TaskCommandResult
+		await context.bot.mbSend(saveChannelId, {
+			content: context.formatter.savedPrompt(cmdResult.task),
+			files
 		})
 	}
 }

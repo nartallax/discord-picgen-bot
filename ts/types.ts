@@ -13,6 +13,7 @@ export interface Config {
 	readonly clientID: string
 	readonly guildID: string
 	readonly channelID?: readonly string[]
+	readonly savedPropmtsChannelID?: string
 	readonly params: readonly GenParamDescription[]
 	readonly commandTemplate: string
 	readonly promptCutoffLimitInDisplay?: number
@@ -22,6 +23,7 @@ export interface Config {
 	readonly tempPicturesDirectory: string
 	readonly convertPicturesToFormat?: string
 	readonly text?: ROOptDeep<{
+		savedPrompt: string
 		errors: {
 			paramNotNumber: string
 			badConfigLaunchCommandTooComplex: string
@@ -108,6 +110,13 @@ export interface GenTask extends GenTaskInput {
 	startTime?: number
 	exitCode?: number
 	process?: ChildProcess.ChildProcessByStdio<null, Stream.Readable, null>
+}
+
+export function stripNonSerializableDataFromTask(task: GenTask): GenTask {
+	return {
+		...task,
+		process: undefined
+	}
 }
 
 export type GenParamValue = GenerationParamDescriptionValueType<GenParamDescription>

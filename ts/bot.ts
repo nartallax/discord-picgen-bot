@@ -44,6 +44,7 @@ interface CommandReactHandlerOptions<P extends string = string, R extends Comman
 	readonly reactUserId: string
 	readonly commandMessage: CommandMessageProperties<P>
 	readonly channelId: string
+	readonly messageId: string
 }
 
 export type CommandDef<R extends CommandResult = CommandResult, P extends string = string> = {
@@ -202,6 +203,7 @@ export class Bot {
 
 		const reactOpts: CommandReactHandlerOptions = {
 			channelId: reaction.message.channelId,
+			messageId: reaction.message.id,
 			commandResult: command.reply,
 			commandMessage: command.msg,
 			reactUserId: user.id
@@ -358,6 +360,11 @@ export class Bot {
 			console.error("Failed to report error " + errorMsg)
 			console.error("Because of " + (e instanceof Error ? e.stack || e.message : e + ""))
 		}
+	}
+
+	getMessage(channelID: string, messageID: string): Discord.Message | undefined {
+		const channel = this.getTextChannel(channelID)
+		return channel.messages.cache.get(messageID)
 	}
 
 }

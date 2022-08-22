@@ -2,6 +2,7 @@
 	"clientID": "469771750285115392",
 	"guildID": "581216905654960129",
 	"channelID": ["601126787497590784"],
+	"savedPropmtsChannelID": "846827490843951174",
 	"commandTemplate": "node picture_generator_example.js $INPUT_JSON",
 	"promptCutoffLimitInDisplay": 50,
 	"deleteFiledAfterUpload": false,
@@ -10,6 +11,7 @@
 	"tempPicturesDirectory": "./tmp_pictures",
 	"convertPicturesToFormat": "jpg",
 	"text": {
+		"savedPrompt": "```\n$PROMPT\n$PARAMS_BY_KEYS_NICE\n```",
 		"errors": {
 			"badConfigLaunchCommandTooComplex": "Bad configuration: weird generation command template. Some part of it parsed as $PART_JSON, and I don't know how to launch that.",
 			"badConfigNoCommandParts": "Bad configuration: weird generation command template. Expected to have at least one command part.",
