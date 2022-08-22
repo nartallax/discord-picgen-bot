@@ -278,6 +278,10 @@ export class Formatter {
 		return this.format(this.t.savedPrompt, this.makeTaskParams(task))
 	}
 
+	starredPrompt(task: GenTask): string | undefined {
+		return this.format(this.t.starredPrompt, this.makeTaskParams(task))
+	}
+
 	private formatFileSize(size: number): string {
 		if(size < 1024){
 			return size + "b"

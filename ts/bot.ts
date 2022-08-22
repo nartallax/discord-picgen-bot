@@ -2,6 +2,7 @@ import {CommandName, commands} from "bot_commands"
 import {BotError} from "bot_error"
 import {AppContext} from "context"
 import * as Discord from "discord.js"
+import {httpGet} from "http_utils"
 import {InteractionStorage} from "interaction_storage"
 import {errToString} from "utils"
 
@@ -17,6 +18,11 @@ export interface CommandResult {
 interface MessageAttachment {
 	readonly url: string
 	readonly contentType: string | null
+}
+
+export interface AttachmentWithData {
+	readonly name: string
+	readonly data: Buffer
 }
 
 export interface CommandMessageProperties<P extends string = string> {
@@ -304,7 +310,7 @@ export class Bot {
 		}
 	}
 
-	async mbSend(channelId: string, message: string | {content?: string, files?: {name: string, data: Buffer}[]} | undefined, interaction?: DefaultInteraction): Promise<Discord.Message | null> {
+	async mbSend(channelId: string, message: string | {content?: string, files?: AttachmentWithData[]} | undefined, interaction?: DefaultInteraction): Promise<Discord.Message | null> {
 		const msg: {content?: string, files?: Discord.AttachmentBuilder[]} = {}
 		if(message === undefined){
 			return null
@@ -362,9 +368,43 @@ export class Bot {
 		}
 	}
 
-	getMessage(channelID: string, messageID: string): Discord.Message | undefined {
+	private getMessage(channelID: string, messageID: string): Discord.Message | undefined {
 		const channel = this.getTextChannel(channelID)
 		return channel.messages.cache.get(messageID)
+	}
+
+	async deleteMessage(channelID: string, messageID: string): Promise<void> {
+		const msg = this.getMessage(channelID, messageID)
+		if(!msg){
+			console.error(`Cannot delete message ${messageID} from ${channelID}: no message`)
+			return
+		}
+		if(!msg.deletable){
+			console.error(`Cannot delete message ${messageID} from ${channelID}: message is not deletable`)
+			return
+		}
+		await msg.delete()
+	}
+
+	async downloadAttachments(channelID: string, messageID: string): Promise<AttachmentWithData[]> {
+		const msg = this.getMessage(channelID, messageID)
+		if(!msg){
+			return []
+		}
+
+		const files = [] as AttachmentWithData[]
+		let i = 0
+		for(const attachment of msg.attachments.values()){
+			++i
+			const fileContent = await httpGet(attachment.url)
+			const fileName = attachment.name
+				? attachment.name
+				: attachment.contentType
+					? i + "." + attachment.contentType.replace(/^.*?\//, "")
+					: "unknown_file"
+			files.push({data: fileContent, name: fileName})
+		}
+		return files
 	}
 
 }

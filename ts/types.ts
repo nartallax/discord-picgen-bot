@@ -14,6 +14,7 @@ export interface Config {
 	readonly guildID: string
 	readonly channelID?: readonly string[]
 	readonly savedPropmtsChannelID?: string
+	readonly starredPromptsChannelID?: string
 	readonly params: readonly GenParamDescription[]
 	readonly commandTemplate: string
 	readonly promptCutoffLimitInDisplay?: number
@@ -24,6 +25,7 @@ export interface Config {
 	readonly convertPicturesToFormat?: string
 	readonly text?: ROOptDeep<{
 		savedPrompt: string
+		starredPrompt: string
 		errors: {
 			paramNotNumber: string
 			badConfigLaunchCommandTooComplex: string

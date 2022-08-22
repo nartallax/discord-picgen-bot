@@ -1,7 +1,6 @@
 import {CommandDef, CommandResult, MessageReacts} from "bot"
 import {AppContext} from "context"
 import {TaskCommandResult} from "gen_runner"
-import {httpGet} from "http_utils"
 import {GenTask} from "types"
 
 type StartGenResult = CommandResult & {taskId?: number}
@@ -32,27 +31,28 @@ export const saveMessageReact: MessageReacts = {
 			throw new Error("Cannot save stuff: no save channel id is provided.")
 		}
 
-		const msg = context.bot.getMessage(reaction.channelId, reaction.messageId)
-		const files: {name: string, data: Buffer}[] = []
-		if(msg){
-			let i = 0
-			for(const attachment of msg.attachments.values()){
-				++i
-				const fileContent = await httpGet(attachment.url)
-				const fileName = attachment.name
-					? attachment.name
-					: attachment.contentType
-						? i + "." + attachment.contentType.replace(/^.*?\//, "")
-						: "unknown_file"
-				files.push({data: fileContent, name: fileName})
-			}
-		}
-
 		const cmdResult = reaction.commandResult as TaskCommandResult
 		await context.bot.mbSend(saveChannelId, {
 			content: context.formatter.savedPrompt(cmdResult.task),
-			files
+			files: await context.bot.downloadAttachments(reaction.channelId, reaction.messageId)
 		})
+	}
+}
+
+export const starMessageReact: MessageReacts = {
+	"⭐": async(context, reaction) => {
+		const starredPromptsChannelID = context.config.starredPromptsChannelID
+		if(!starredPromptsChannelID){
+			throw new Error("Cannot save stuff: no starred channel id is provided.")
+		}
+
+		const cmdResult = reaction.commandResult as TaskCommandResult
+		await context.bot.mbSend(starredPromptsChannelID, {
+			content: context.formatter.starredPrompt(cmdResult.task),
+			files: await context.bot.downloadAttachments(reaction.channelId, reaction.messageId)
+		})
+
+		await context.bot.deleteMessage(reaction.channelId, reaction.messageId)
 	}
 }
 

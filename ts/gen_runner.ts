@@ -8,7 +8,7 @@ import {promises as Fs} from "fs"
 import {AppContext} from "context"
 import {errToString, isEnoent} from "utils"
 import {GenTask, GenTaskInput, stripNonSerializableDataFromTask} from "types"
-import {displayQueueReact, reDreamReact, saveMessageReact} from "bot_commands"
+import {displayQueueReact, reDreamReact, saveMessageReact, starMessageReact} from "bot_commands"
 import {CommandResult} from "bot"
 
 type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine
@@ -97,13 +97,20 @@ export class GenRunner {
 					files: [{name: Path.basename(line.generatedPicture), data: content}]
 				}
 			)
-			if(message && this.context.config.savedPropmtsChannelID){
-				this.context.bot.addReactsToMessage(
-					message,
-					task.command,
-					this.getFakeCommandResult(task, pictureGeneratedText),
-					saveMessageReact
-				)
+			if(message){
+				const saveMessage = this.context.config.savedPropmtsChannelID ? saveMessageReact : null
+				const starMessage = this.context.config.starredPromptsChannelID ? starMessageReact : null
+				if(saveMessage || starMessage){
+					this.context.bot.addReactsToMessage(
+						message,
+						task.command,
+						this.getFakeCommandResult(task, pictureGeneratedText),
+						{
+							...(saveMessage || {}),
+							...(starMessage || {})
+						}
+					)
+				}
 			}
 		} catch(e){
 			if(e instanceof Discord.DiscordAPIError && (e.code + "") === "40005"){
