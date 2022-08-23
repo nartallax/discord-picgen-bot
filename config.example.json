@@ -11,11 +11,17 @@
 	"reactionWaitingTimeSeconds": 86400,
 	"tempPicturesDirectory": "./tmp_pictures",
 	"convertPicturesToFormat": "jpg",
+	"permissions": {
+		"🤔": ["595903743308857347", "595900578975055885"]
+	},
 	"text": {
 		"lenny": ["( ͡° ͜ʖ ͡°)", "ಥ‿ಥ", "。◕‿‿◕。"],
 		"savedPrompt": "```\n$PROMPT\n$PARAMS_BY_KEYS_NICE\n```",
 		"starredPrompt": "THIS is nice! I like that!",
 		"errors": {
+			"cannotResolveGuild": "Cannot get guild $GUILD_ID!",
+			"cannotResolveMember": "Cannot get member $USER_ID!",
+			"actionNotAllowed": "Hey $USER, you cannot do $ACTION!",
 			"badConfigLaunchCommandTooComplex": "Bad configuration: weird generation command template. Some part of it parsed as $PART_JSON, and I don't know how to launch that.",
 			"badConfigNoCommandParts": "Bad configuration: weird generation command template. Expected to have at least one command part.",
 			"paramNotNumber": "Was expecting number as value of parameter $PARAM_KEY, got $PARAM_VALUE instead",

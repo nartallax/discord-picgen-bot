@@ -202,10 +202,13 @@ export class Bot {
 			return
 		}
 
-		const reactHandler = command.reacts[reaction.emoji.name || ""]
+		const emojiName = reaction.emoji.name || ""
+		const reactHandler = command.reacts[emojiName]
 		if(!reactHandler){
 			return
 		}
+
+		this.checkPermission(emojiName, user.id)
 
 		const reactOpts: CommandReactHandlerOptions = {
 			channelId: reaction.message.channelId,
@@ -228,6 +231,8 @@ export class Bot {
 		if(!commandDef){
 			return // not our command anyway
 		}
+
+		this.checkPermission(commandName, message.author.id)
 
 		const params = commandDef.params
 		const opts: Record<string, string | number> = {}
@@ -281,6 +286,9 @@ export class Bot {
 				opts[item.name] = item.value
 			}
 		}
+
+		this.checkPermission(interaction.commandName, interaction.user.id)
+
 		await this.runCommand({
 			channelId: interaction.channelId,
 			command: interaction.commandName,
@@ -408,6 +416,32 @@ export class Bot {
 			files.push({data: fileContent, name: fileName})
 		}
 		return files
+	}
+
+	private checkPermission(commandOrEmote: string, userId: string): void {
+		const allowedRoles = this.context.config.permissions?.[commandOrEmote]
+		if(!allowedRoles){
+			return // no allow-list = allow everyone
+		}
+
+		const guild = this.client.guilds.cache.get(this.context.config.guildID)
+		if(!guild){
+			throw new BotError(this.context.formatter.errorCannotResolveGuild(this.context.config.guildID))
+		}
+
+		const member = guild.members.cache.get(userId)
+		if(!member){
+			throw new BotError(this.context.formatter.errorCannotResolveMember(userId))
+		}
+
+		for(const roleId of allowedRoles){
+			const role = member.roles.cache.get(roleId)
+			if(role){
+				return
+			}
+		}
+
+		throw new BotError(this.context.formatter.errorActionNotAllowed(commandOrEmote, userId))
 	}
 
 }

@@ -23,11 +23,17 @@ export interface Config {
 	readonly reactionWaitingTimeSeconds?: number
 	readonly tempPicturesDirectory: string
 	readonly convertPicturesToFormat?: string
+	readonly permissions?: {
+		readonly [commandOrEmote in string]?: readonly string[]
+	}
 	readonly text?: DeepTexts<{
 		lenny: string
 		savedPrompt: string
 		starredPrompt: string
 		errors: {
+			cannotResolveGuild: string
+			cannotResolveMember: string
+			actionNotAllowed: string
 			paramNotNumber: string
 			badConfigLaunchCommandTooComplex: string
 			badConfigNoCommandParts: string

@@ -311,6 +311,34 @@ export class Formatter {
 		)
 	}
 
+	errorCannotResolveGuild(guildId: string): string {
+		return this.format(
+			dflt(this.t.errors?.cannotResolveGuild, "Cannot get guild $GUILD_ID!"),
+			{
+				GUILD_ID: guildId
+			}
+		)
+	}
+
+	errorCannotResolveMember(userId: string): string {
+		return this.format(
+			dflt(this.t.errors?.cannotResolveMember, "Cannot get member $USER_ID!"),
+			{
+				USER_ID: userId
+			}
+		)
+	}
+
+	errorActionNotAllowed(action: string, userId: string): string {
+		return this.format(
+			dflt(this.t.errors?.actionNotAllowed, "Hey $USER, you cannot do $ACTION!"),
+			{
+				USER: this.formatUserMention(userId),
+				ACTION: action
+			}
+		)
+	}
+
 	savedPrompt(task: GenTask): string | undefined {
 		return this.format(this.t.savedPrompt, this.makeTaskParams(task))
 	}
@@ -341,7 +369,7 @@ export class Formatter {
 	private makeCommandParams(command: CommandPropsShort): {readonly [k: string]: string} {
 		return {
 			COMMAND: command.command || "???",
-			USER: `<@${command.userId}>`
+			USER: this.formatUserMention(command.userId)
 		}
 	}
 
@@ -358,7 +386,7 @@ export class Formatter {
 			PARAMS_NICE: this.paramsToNiceString(task, true),
 			PARAMS_NICE_FULL: this.paramsToNiceString(task, false),
 			PARAMS_BY_KEYS_NICE: this.origParamsWithKeysToNiceString(task),
-			USER: `<@${task.userId}>`,
+			USER: this.formatUserMention(task.userId),
 			PROMPT: task.prompt,
 			PROMPT_SHORT: shortPrompt,
 			TIME_PASSED: this.formatTimePassed(task),
@@ -436,6 +464,11 @@ export class Formatter {
 				? templatePair.public
 				: templatePair.private || templatePair.public
 	}
+
+	private formatUserMention(userId: string): string {
+		return `<@${userId}>`
+	}
+
 }
 
 const td = (x: number) => (x > 9 ? "" : "0") + x
