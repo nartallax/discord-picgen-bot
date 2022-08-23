@@ -4,6 +4,7 @@ import {AppContext} from "context"
 import * as Discord from "discord.js"
 import {httpGet} from "http_utils"
 import {InteractionStorage} from "interaction_storage"
+import {CommandMessageProperties, MessageAttachment} from "types"
 import {errToString} from "utils"
 
 type DefaultInteraction = Discord.ChatInputCommandInteraction<Discord.CacheType>
@@ -15,22 +16,9 @@ export interface CommandResult {
 	readonly isRefuse?: boolean
 }
 
-interface MessageAttachment {
-	readonly url: string
-	readonly contentType: string | null
-}
-
 export interface AttachmentWithData {
 	readonly name: string
 	readonly data: Buffer
-}
-
-export interface CommandMessageProperties<P extends string = string> {
-	readonly channelId: string
-	readonly userId: string
-	readonly command: string
-	readonly options: CommandOptionsObject<P>
-	readonly attachments?: readonly MessageAttachment[]
 }
 
 interface OptBase {
@@ -42,8 +30,6 @@ interface OptBase {
 export interface MessageReacts<P extends string = string, R extends CommandResult = CommandResult> {
 	readonly [emote: string]: (context: AppContext, opts: CommandReactHandlerOptions<P, R>) => Async<void>
 }
-
-export type CommandOptionsObject<P extends string = string> = {readonly [key in P]: number | string}
 
 interface CommandReactHandlerOptions<P extends string = string, R extends CommandResult = CommandResult> {
 	readonly commandResult: R

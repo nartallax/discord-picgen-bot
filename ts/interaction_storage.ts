@@ -1,4 +1,5 @@
-import {CommandMessageProperties, CommandResult, MessageReacts} from "bot"
+import {CommandResult, MessageReacts} from "bot"
+import {CommandMessageProperties} from "types"
 import {MapQueue} from "map_queue"
 
 interface StoredInteraction {

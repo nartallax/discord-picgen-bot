@@ -1,8 +1,7 @@
-import {CommandMessageProperties} from "bot"
 import {BotError} from "bot_error"
 import {AppContext} from "context"
 import {httpGet} from "http_utils"
-import {GenParamDescription, GenParamValue, GenParamValuesObject, GenTaskInput} from "types"
+import {GenParamDescription, GenParamValue, GenParamValuesObject, GenTaskInput, CommandMessageProperties} from "types"
 
 let taskIdCounter = 0
 

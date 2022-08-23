@@ -14,6 +14,13 @@
 	"permissions": {
 		"🤔": ["595903743308857347", "595900578975055885"]
 	},
+	"repeatedTasks": [{
+		"timeMask": ["^.*?:.[05]$"],
+		"command": "dream",
+		"options": {"params": "nya-nya! --silent"},
+		"channelId": "846827490843951174",
+		"userId": "469771750285115392"
+	}],
 	"text": {
 		"lenny": ["( ͡° ͜ʖ ͡°)", "ಥ‿ಥ", "。◕‿‿◕。"],
 		"savedPrompt": "```\n$PROMPT\n$PARAMS_BY_KEYS_NICE\n```",

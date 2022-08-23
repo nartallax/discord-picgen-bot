@@ -5,6 +5,7 @@ import {Config} from "types"
 import {Bot} from "bot"
 import {Formatter} from "formatter"
 import {PictureManager} from "picture_manager"
+import {Scheduler} from "scheduler"
 
 export interface AppContext {
 	readonly config: Config
@@ -14,6 +15,7 @@ export interface AppContext {
 	readonly bot: Bot
 	readonly formatter: Formatter
 	readonly pictureManager: PictureManager
+	readonly scheduler: Scheduler
 }
 
 export function createAppContext(config: Config, token: string): AppContext {
@@ -22,6 +24,7 @@ export function createAppContext(config: Config, token: string): AppContext {
 	let queue: GenQueue | null = null
 	let bot: Bot | null = null
 	let formatter: Formatter | null = null
+	let scheduler: Scheduler | null = null
 	const pictureManager = new PictureManager(config.tempPicturesDirectory, config.convertPicturesToFormat)
 	const context: AppContext = {
 		config,
@@ -40,8 +43,11 @@ export function createAppContext(config: Config, token: string): AppContext {
 		get formatter() {
 			return formatter ||= new Formatter(context)
 		},
+		get scheduler() {
+			return scheduler ||= new Scheduler(context)
+		},
 		pictureManager
 	}
-	void context.cmdParser, context.runner, context.bot, context.formatter
+	void context.cmdParser, context.runner, context.bot, context.formatter, context.scheduler
 	return context
 }

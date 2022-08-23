@@ -1,7 +1,6 @@
-import {CommandMessageProperties} from "bot"
 import {AppContext} from "context"
 import {allKeysOfGenParam} from "input_parser"
-import {Config, GenParamDescription, GenTask} from "types"
+import {Config, GenParamDescription, GenTask, CommandMessageProperties} from "types"
 import {toFixedNoTrailingZeroes} from "utils"
 
 type DropUndef<T> = T extends undefined ? never : T

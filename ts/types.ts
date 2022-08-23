@@ -1,10 +1,24 @@
-import {CommandMessageProperties} from "bot"
 import * as ChildProcess from "child_process"
 import * as Stream from "stream"
 
 interface PrivatePublicTemplate {
 	private: string
 	public: string
+}
+
+export type CommandOptionsObject<P extends string = string> = {readonly [key in P]: number | string}
+
+export interface CommandMessageProperties<P extends string = string> {
+	readonly channelId: string
+	readonly userId: string
+	readonly command: string
+	readonly options: CommandOptionsObject<P>
+	readonly attachments?: readonly MessageAttachment[]
+}
+
+export interface MessageAttachment {
+	readonly url: string
+	readonly contentType: string | null
 }
 
 export interface Config {
@@ -26,6 +40,9 @@ export interface Config {
 	readonly permissions?: {
 		readonly [commandOrEmote in string]?: readonly string[]
 	}
+	readonly repeatedTasks?: readonly ({
+		readonly timeMask: readonly string[]
+	} & CommandMessageProperties)[]
 	readonly text?: DeepTexts<{
 		lenny: string
 		savedPrompt: string
