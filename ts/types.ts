@@ -23,7 +23,8 @@ export interface Config {
 	readonly reactionWaitingTimeSeconds?: number
 	readonly tempPicturesDirectory: string
 	readonly convertPicturesToFormat?: string
-	readonly text?: ROOptDeep<{
+	readonly text?: DeepTexts<{
+		lenny: string
 		savedPrompt: string
 		starredPrompt: string
 		errors: {
@@ -102,6 +103,7 @@ export interface GenTaskInput {
 	readonly channelId: string
 	readonly droppedPromptWordsCount: number
 	readonly isPrivate: boolean
+	readonly isSilent: boolean
 	readonly inputImages: readonly string[]
 	readonly command: CommandMessageProperties
 }
@@ -152,9 +154,9 @@ interface GenerationNumberParamDescription extends GenerationParamDescriptionBas
 
 interface GenerationBoolParamDescription extends GenerationParamDescriptionBase<boolean> {
 	readonly type: "bool"
-	readonly role?: "private"
+	readonly role?: "private" | "silent"
 }
 
-type ROOptDeep<T> = T extends string ? T : {
-	readonly [k in keyof T]?: ROOptDeep<T[k]>
+type DeepTexts<T> = T extends string ? T | T[] : {
+	readonly [k in keyof T]?: DeepTexts<T[k]>
 }

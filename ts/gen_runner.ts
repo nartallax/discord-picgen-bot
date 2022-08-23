@@ -11,7 +11,7 @@ import {GenTask, GenTaskInput, stripNonSerializableDataFromTask} from "types"
 import {displayQueueReact, reDreamReact, saveMessageReact, starMessageReact} from "bot_commands"
 import {CommandResult} from "bot"
 
-type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine
+type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine | MessageLine
 
 export type TaskCommandResult = CommandResult & {
 	task: GenTaskInput
@@ -29,6 +29,13 @@ interface ErrorLine {
 }
 function isErrorLine(line: OutputLine): line is ErrorLine {
 	return typeof((line as ErrorLine).error) === "string"
+}
+
+interface MessageLine {
+	message: string
+}
+function isMessageLine(line: OutputLine): line is MessageLine {
+	return typeof((line as MessageLine).message) === "string"
 }
 
 interface ExpectedPicturesLine {
@@ -60,6 +67,9 @@ export class GenRunner {
 	}
 
 	private async sendTaskMessage(task: GenTask, msg: string | undefined): Promise<Discord.Message | null> {
+		if(task.isSilent){
+			return null
+		}
 		return await this.context.bot.mbSend(task.channelId, msg)
 	}
 
@@ -70,6 +80,9 @@ export class GenRunner {
 		try {
 			content = await Fs.readFile(line.generatedPicture)
 		} catch(e){
+			if(task.isSilent){
+				return
+			}
 			if(isEnoent(e)){
 				await this.context.bot.mbSend(
 					task.channelId,
@@ -97,7 +110,7 @@ export class GenRunner {
 					files: [{name: Path.basename(line.generatedPicture), data: content}]
 				}
 			)
-			if(message){
+			if(message && !task.isSilent){
 				const saveMessage = this.context.config.savedPropmtsChannelID ? saveMessageReact : null
 				const starMessage = this.context.config.starredPromptsChannelID ? starMessageReact : null
 				if(saveMessage || starMessage){
@@ -211,6 +224,8 @@ export class GenRunner {
 				}
 				if(isErrorLine(line)){
 					await this.sendTaskMessage(task, line.error)
+				} else if(isMessageLine(line)){
+					await this.sendTaskMessage(task, line.message)
 				} else if(isGeneratedFileLine(line)){
 					await this.sendResult(task, line)
 				} else if(isExpectedPicturesLine(line)){

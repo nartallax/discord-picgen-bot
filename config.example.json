@@ -12,6 +12,7 @@
 	"tempPicturesDirectory": "./tmp_pictures",
 	"convertPicturesToFormat": "jpg",
 	"text": {
+		"lenny": ["( ͡° ͜ʖ ͡°)", "ಥ‿ಥ", "。◕‿‿◕。"],
 		"savedPrompt": "```\n$PROMPT\n$PARAMS_BY_KEYS_NICE\n```",
 		"starredPrompt": "THIS is nice! I like that!",
 		"errors": {
@@ -103,6 +104,13 @@
 		}
 	},
 	"params": [{
+		"key": ["--silent"],
+		"jsonName": "silent",
+		"role": "silent",
+		"type": "bool",
+		"humanName": "Silent",
+		"description": "hides most of the text output related to task, only pictures remains. reacts also won't be active."
+	}, {
 		"key": ["--private"],
 		"jsonName": "private",
 		"role": "private",

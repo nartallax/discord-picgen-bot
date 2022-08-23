@@ -298,7 +298,7 @@ export class Bot {
 		const reply = await Promise.resolve(def.handler(this.context, msg))
 		const replyMessage = await this.replyOrSend(msg.channelId, {content: reply.reply}, interaction)
 
-		if(def.reacts && !reply.isRefuse){
+		if(def.reacts && replyMessage && !reply.isRefuse){
 			this.addReactsToMessage(replyMessage, msg, reply, def.reacts)
 		}
 	}
@@ -334,7 +334,10 @@ export class Bot {
 		return await this.replyOrSend(channelId, msg, interaction)
 	}
 
-	private async replyOrSend(channelId: string, message: {content?: string, files?: Discord.AttachmentBuilder[]}, interaction?: DefaultInteraction): Promise<Discord.Message> {
+	private async replyOrSend(channelId: string, message: {content?: string, files?: Discord.AttachmentBuilder[]}, interaction?: DefaultInteraction): Promise<Discord.Message | null> {
+		if(!message.content && (!message.files || message.files.length === 0)){
+			return null
+		}
 		if(interaction && !interaction.replied){
 			return await interaction.reply({...message, fetchReply: true})
 		} else {

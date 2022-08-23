@@ -11,6 +11,7 @@ export class GenParamParser {
 
 	private readonly lastQueryByUser = new Map<string, GenTaskInput>()
 	private readonly privateParamName: string | undefined
+	private readonly silentParamName: string | undefined
 
 	constructor(private readonly context: AppContext) {
 		for(const def of context.config.params){
@@ -19,8 +20,12 @@ export class GenParamParser {
 				this.registerParam(key, def)
 			}
 		}
+
 		const privateParam = context.config.params.find(x => x.type === "bool" && x.role === "private")
 		this.privateParamName = privateParam?.jsonName
+
+		const silentParam = context.config.params.find(x => x.type === "bool" && x.role === "silent")
+		this.silentParamName = silentParam?.jsonName
 	}
 
 	private registerParam(key: string, def: GenParamDescription) {
@@ -40,7 +45,8 @@ export class GenParamParser {
 		const paramsPassedByHuman = Object.keys(params)
 		this.checkAndUseDefaults(params, command)
 		const isPrivate = !this.privateParamName ? false : !!params[this.privateParamName]
-		const result: GenTaskInput = {prompt, params, id: 0, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate, originalKeyValuePairs, inputImages, command}
+		const isSilent = !this.silentParamName ? false : !!params[this.silentParamName]
+		const result: GenTaskInput = {prompt, params, id: 0, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate, isSilent, originalKeyValuePairs, inputImages, command}
 
 		this.lastQueryByUser.set(result.userId, result)
 

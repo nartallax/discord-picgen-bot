@@ -70,8 +70,8 @@ export const reDreamReact: MessageReacts = {
 const _commands = {
 	lenny: cmd({
 		description: () => "( ͡° ͜ʖ ͡°)",
-		handler: () => {
-			return {reply: "( ͡° ͜ʖ ͡°)"}
+		handler: context => {
+			return {reply: context.formatter.lenny()}
 		},
 		reacts: {
 			"🤔": (context, reaction) => {

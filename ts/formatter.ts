@@ -29,26 +29,44 @@ export class Formatter {
 	}
 
 	dreamOutputPictureNotFound(task: GenTask, fileName: string): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.outputPictureFormat(this.select(task, this.t.dream?.outputPictureNotFound), task, fileName)
 	}
 
 	dreamFailedToReadOutputPicture(task: GenTask, fileName: string): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.outputPictureFormat(this.select(task, this.t.dream?.outputPictureNotFound), task, fileName)
 	}
 
 	dreamOutputPicture(task: GenTask, fileName: string): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.outputPictureFormat(this.select(task, this.t.dream?.outputPicture), task, fileName)
 	}
 
 	dreamGenerationCompleted(task: GenTask): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.format(this.select(task, this.t.dream?.generationCompleted), this.makeTaskParams(task))
 	}
 
 	dreamNewTaskCreated(task: GenTask): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.format(this.select(task, this.t.dream?.newTaskCreated), this.makeTaskParams(task))
 	}
 
 	dreamPromptWordsDroppedOnTaskCreation(task: GenTask): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.format(this.select(task, this.t.dream?.promptWordsDroppedOnTaskCreation), this.makeTaskParams(task))
 	}
 
@@ -57,10 +75,16 @@ export class Formatter {
 	}
 
 	statusRunningTask(task: GenTask): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.format(this.select(task, this.t.status?.runningTask), this.makeTaskParams(task))
 	}
 
 	statusQueuedTask(task: GenTask): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.format(this.select(task, this.t.status?.queuedTask), this.makeTaskParams(task))
 	}
 
@@ -81,6 +105,9 @@ export class Formatter {
 	}
 
 	dropKilledRunningTask(cmd: CommandPropsShort, task: GenTask): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.format(this.select(task, this.t.drop?.killedRunningTask), {
 			...this.makeCommandParams(cmd),
 			...this.makeTaskParams(task)
@@ -88,6 +115,9 @@ export class Formatter {
 	}
 
 	dropDequeuedTask(cmd: CommandPropsShort, task: GenTask): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.format(this.select(task, this.t.drop?.dequeuedTask), {
 			...this.makeCommandParams(cmd),
 			...this.makeTaskParams(task)
@@ -114,6 +144,9 @@ export class Formatter {
 	}
 
 	killSuccess(cmd: CommandPropsShort, task: GenTask): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
 		return this.format(this.select(task, this.t.kill?.success), {
 			...this.makeCommandParams(cmd),
 			...this.makeTaskParams(task)
@@ -129,48 +162,52 @@ export class Formatter {
 	}
 
 	dreamDescription(): string | undefined {
-		return this.t.dream?.description
+		return this.format(this.t.dream?.description, {})
 	}
 
 	dreamhelpDescription(): string | undefined {
-		return this.t.dreamhelp?.description
+		return this.format(this.t.dreamhelp?.description, {})
 	}
 
 	dreamrepeatDescription(): string | undefined {
-		return this.t.dreamrepeat?.description
+		return this.format(this.t.dreamrepeat?.description, {})
 	}
 
 	dropDescription(): string | undefined {
-		return this.t.drop?.description
+		return this.format(this.t.drop?.description, {})
 	}
 
 	killDescription(): string | undefined {
-		return this.t.kill?.description
+		return this.format(this.t.kill?.description, {})
 	}
 
 	purgeDescription(): string | undefined {
-		return this.t.purge?.description
+		return this.format(this.t.purge?.description, {})
 	}
 
 	clearDescription(): string | undefined {
-		return this.t.clear?.description
+		return this.format(this.t.clear?.description, {})
 	}
 
 	statusDescription(): string | undefined {
-		return this.t.status?.description
+		return this.format(this.t.status?.description, {})
 	}
 
 	dreamParamDescription(): string | undefined {
-		return this.t.dream?.paramDescription
+		return this.format(this.t.dream?.paramDescription, {})
 	}
 
 	dropTaskIdDescription(): string | undefined {
-		return this.t.drop?.taskIdDescription
+		return this.format(this.t.drop?.taskIdDescription, {})
+	}
+
+	lenny(): string {
+		return this.format(dflt(this.t.lenny, "( ͡° ͜ʖ ͡°)"), {})
 	}
 
 	errorParamNotNumber(paramName: string, paramValue: string, command: CommandPropsShort): string {
 		return this.format(
-			this.t.errors?.paramNotNumber || "Was expecting number as value of parameter $PARAM_NAME, got $PARAM_VALUE instead",
+			dflt(this.t.errors?.paramNotNumber, "Was expecting number as value of parameter $PARAM_NAME, got $PARAM_VALUE instead"),
 			{
 				...this.makeCommandParams(command),
 				PARAM_KEY: paramName,
@@ -181,7 +218,7 @@ export class Formatter {
 
 	errorBadConfigLaunchCommandTooComplex(partJson: string, task: GenTask): string {
 		return this.format(
-			this.t.errors?.badConfigLaunchCommandTooComplex || "Bad configuration: weird generation command template. Some part of it parsed as $PART_JSON, and I don't know how to launch that.",
+			dflt(this.t.errors?.badConfigLaunchCommandTooComplex, "Bad configuration: weird generation command template. Some part of it parsed as $PART_JSON, and I don't know how to launch that."),
 			{
 				...this.makeTaskParams(task),
 				PART_JSON: partJson
@@ -191,21 +228,21 @@ export class Formatter {
 
 	errorBadConfigNoCommandParts(task: GenTask): string {
 		return this.format(
-			this.t.errors?.badConfigNoCommandParts || "Bad configuration: weird generation command template. Expected to have at least one command part.",
+			dflt(this.t.errors?.badConfigNoCommandParts, "Bad configuration: weird generation command template. Expected to have at least one command part."),
 			this.makeTaskParams(task)
 		)
 	}
 
 	errorAttachmentNotPicture(command: CommandPropsShort): string {
 		return this.format(
-			this.t.errors?.attachmentNotPicture || "One of the attachments is not picture; can't process.",
+			dflt(this.t.errors?.attachmentNotPicture, "One of the attachments is not picture; can't process."),
 			this.makeCommandParams(command)
 		)
 	}
 
 	errorDuplicateParamPassed(paramKey: string, command: CommandPropsShort): string {
 		return this.format(
-			this.t.errors?.duplicateParamPassed || "One of parameters is defined twice, last time with key $PARAM_KEY",
+			dflt(this.t.errors?.duplicateParamPassed, "One of parameters is defined twice, last time with key $PARAM_KEY"),
 			{
 				...this.makeCommandParams(command),
 				PARAM_KEY: paramKey
@@ -215,7 +252,7 @@ export class Formatter {
 
 	errorNoValueAfterParam(paramKey: string, command: CommandPropsShort): string {
 		return this.format(
-			this.t.errors?.noValueAfterParam || "Expected a value after key $PARAM_KEY",
+			dflt(this.t.errors?.noValueAfterParam, "Expected a value after key $PARAM_KEY"),
 			{
 				...this.makeCommandParams(command),
 				PARAM_KEY: paramKey
@@ -224,7 +261,7 @@ export class Formatter {
 	}
 	errorParamNotInteger(paramKey: string, paramValue: string, command: CommandPropsShort): string {
 		return this.format(
-			this.t.errors?.paramNotInteger || "Expected integer number value after key $PARAM_KEY, but this value has fractional part: $PARAM_VALUE",
+			dflt(this.t.errors?.paramNotInteger, "Expected integer number value after key $PARAM_KEY, but this value has fractional part: $PARAM_VALUE"),
 			{
 				...this.makeCommandParams(command),
 				PARAM_KEY: paramKey,
@@ -235,7 +272,7 @@ export class Formatter {
 
 	errorParamNotInAllowedList(paramKey: string, paramValue: string, command: CommandPropsShort): string {
 		return this.format(
-			this.t.errors?.paramNotInAllowedList || "Value $PARAM_VALUE is not one of allowed values of parameter $PARAM_KEY.",
+			dflt(this.t.errors?.paramNotInAllowedList, "Value $PARAM_VALUE is not one of allowed values of parameter $PARAM_KEY."),
 			{
 				...this.makeCommandParams(command),
 				PARAM_KEY: paramKey,
@@ -246,7 +283,7 @@ export class Formatter {
 
 	errorRequiredParamNotPassed(paramKey: string, command: CommandPropsShort): string {
 		return this.format(
-			this.t.errors?.requiredParamNotPassed || "No value is provided for parameter $PARAM_KEY, and it has no default. Cannot continue without this value.",
+			dflt(this.t.errors?.requiredParamNotPassed, "No value is provided for parameter $PARAM_KEY, and it has no default. Cannot continue without this value."),
 			{
 				...this.makeCommandParams(command),
 				PARAM_KEY: paramKey
@@ -256,7 +293,7 @@ export class Formatter {
 
 	errorUnknownParam(paramKey: string, command: CommandPropsShort): string {
 		return this.format(
-			this.t.errors?.unknownParam || "No param is defined for key $PARAM_KEY",
+			dflt(this.t.errors?.unknownParam, "No param is defined for key $PARAM_KEY"),
 			{
 				...this.makeCommandParams(command),
 				PARAM_KEY: paramKey
@@ -266,7 +303,7 @@ export class Formatter {
 
 	errorPictureTooLarge(size: number, task: GenTask): string {
 		return this.format(
-			this.t.errors?.pictureTooLarge || "Cannot upload picture $PICTURES_GENERATED / $PICTURES_EXPECTED: it is too large ($IMAGE_SIZE)",
+			dflt(this.t.errors?.pictureTooLarge, "Cannot upload picture $PICTURES_GENERATED / $PICTURES_EXPECTED: it is too large ($IMAGE_SIZE)"),
 			{
 				...this.makeTaskParams(task),
 				IMAGE_SIZE: this.formatFileSize(size)
@@ -294,7 +331,7 @@ export class Formatter {
 		return toFixedNoTrailingZeroes(size, 2) + "mb"
 	}
 
-	private outputPictureFormat(template: string | undefined, task: GenTask, fileName: string): string | undefined {
+	private outputPictureFormat(template: string | string[] | undefined, task: GenTask, fileName: string): string | undefined {
 		return this.format(template, {
 			...this.makeTaskParams(task),
 			GENERATED_PICTURE_PATH: fileName
@@ -370,9 +407,16 @@ export class Formatter {
 			: this.context.config.params.map(x => x.jsonName)
 	}
 
-	private format(template: string, params: {readonly [k: string]: string}): string
-	private format(template: string | undefined, params: {readonly [k: string]: string}): string | undefined
-	private format(template: string | undefined, params: {readonly [k: string]: string}): string | undefined {
+	private format(template: string | string[], params: {readonly [k: string]: string}): string
+	private format(template: string | string[] | undefined, params: {readonly [k: string]: string}): string | undefined
+	private format(template: string | string[] | undefined, params: {readonly [k: string]: string}): string | undefined {
+		if(Array.isArray(template)){
+			if(template.length === 0){
+				template = undefined
+			} else {
+				template = template[Math.floor(Math.random() * template.length)]
+			}
+		}
 		if(!template){
 			return undefined
 		}
@@ -385,7 +429,7 @@ export class Formatter {
 		})
 	}
 
-	private select(task: GenTask, templatePair: {readonly public?: string, readonly private?: string} | undefined): string | undefined {
+	private select(task: GenTask, templatePair: {readonly public?: string | string[], readonly private?: string | string[]} | undefined): string | string[] | undefined {
 		return !templatePair
 			? undefined
 			: !task.isPrivate
@@ -395,3 +439,13 @@ export class Formatter {
 }
 
 const td = (x: number) => (x > 9 ? "" : "0") + x
+
+function dflt(x: string | string[] | undefined, deflt: string): string | string[] {
+	if(!x){
+		return deflt
+	}
+	if(Array.isArray(x) && x.length < 1){
+		return deflt
+	}
+	return x
+}
