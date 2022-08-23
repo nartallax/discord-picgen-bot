@@ -32,6 +32,11 @@ export const saveMessageReact: MessageReacts = {
 		}
 
 		const cmdResult = reaction.commandResult as TaskCommandResult
+		if(cmdResult.saved){
+			return
+		}
+		cmdResult.saved = true
+
 		await context.bot.mbSend(saveChannelId, {
 			content: context.formatter.savedPrompt(cmdResult.task),
 			files: await context.bot.downloadAttachments(reaction.channelId, reaction.messageId)
@@ -47,12 +52,15 @@ export const starMessageReact: MessageReacts = {
 		}
 
 		const cmdResult = reaction.commandResult as TaskCommandResult
+		if(cmdResult.starred){
+			return
+		}
+		cmdResult.starred = true
+
 		await context.bot.mbSend(starredPromptsChannelID, {
 			content: context.formatter.starredPrompt(cmdResult.task),
 			files: await context.bot.downloadAttachments(reaction.channelId, reaction.messageId)
 		})
-
-		await context.bot.deleteMessage(reaction.channelId, reaction.messageId)
 	}
 }
 

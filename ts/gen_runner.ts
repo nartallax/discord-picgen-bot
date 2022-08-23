@@ -15,6 +15,8 @@ type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine | Message
 
 export type TaskCommandResult = CommandResult & {
 	task: GenTaskInput
+	starred?: boolean
+	saved?: boolean
 }
 
 interface GeneratedFileLine {
