@@ -150,7 +150,21 @@ export class Bot {
 	}
 
 	private isChannelAllowed(channelId: string): boolean {
-		return !this.allowedChannels || this.allowedChannels.has(channelId)
+		if(!this.allowedChannels || this.allowedChannels.has(channelId)){
+			return true
+		}
+		const channel = this.client.channels.cache.get(channelId)
+		if(!channel){
+			console.error("Cannot resolve channel " + channelId)
+			return false
+		}
+		if(channel.isThread()){
+			const parent = channel.parent
+			if(parent && parent.isTextBased()){
+				return this.allowedChannels.has(parent.id)
+			}
+		}
+		return false
 	}
 
 	private listen(): void {
