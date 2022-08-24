@@ -8,8 +8,9 @@ import {promises as Fs} from "fs"
 import {AppContext} from "context"
 import {errToString, isEnoent} from "utils"
 import {GenTask, GenTaskInput, stripNonSerializableDataFromTask} from "types"
-import {displayQueueReact, reDreamReact, saveMessageReact, starMessageReact} from "bot_commands"
+import {displayQueueReact, repeatReact, saveMessageReact, starMessageReact} from "commands/bot_commands"
 import {CommandResult} from "bot"
+import {GenerationFormatter} from "formatters/generation_formatter"
 
 type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine | MessageLine
 
@@ -49,23 +50,13 @@ function isExpectedPicturesLine(line: OutputLine): line is ExpectedPicturesLine 
 
 export class GenRunner {
 
-	private currentTask: GenTask | null = null
-
-	get currentRunningTask(): GenTask | null {
-		return this.currentTask
-	}
-
-	constructor(private readonly context: AppContext) {}
+	constructor(private readonly context: AppContext,
+		private readonly genFormatter: GenerationFormatter
+	) {}
 
 	async runAndOutput(task: GenTask): Promise<void> {
-		try {
-			task.startTime = Date.now()
-			this.currentTask = task
-			await this.run(task)
-		} finally {
-			this.currentTask = null
-			this.context.queue.tryStart()
-		}
+		task.startTime = Date.now()
+		await this.run(task)
 	}
 
 	private async sendTaskMessage(task: GenTask, msg: string | undefined): Promise<Discord.Message | null> {
@@ -88,12 +79,12 @@ export class GenRunner {
 			if(isEnoent(e)){
 				await this.context.bot.mbSend(
 					task.channelId,
-					this.context.formatter.dreamOutputPictureNotFound(task, line.generatedPicture)
+					this.genFormatter.outputPictureNotFound(task, line.generatedPicture)
 				)
 			} else {
 				await this.context.bot.mbSend(
 					task.channelId,
-					this.context.formatter.dreamFailedToReadOutputPicture(task, line.generatedPicture)
+					this.genFormatter.failedToReadOutputPicture(task, line.generatedPicture)
 				)
 				console.error(errToString(e))
 			}
@@ -101,7 +92,7 @@ export class GenRunner {
 		}
 
 		try {
-			const pictureGeneratedText = this.context.formatter.dreamOutputPicture({
+			const pictureGeneratedText = this.genFormatter.outputPicture({
 				...task,
 				generatedPictures: pictureIndex
 			}, line.generatedPicture)
@@ -182,7 +173,7 @@ export class GenRunner {
 	}
 
 	private async onTaskCompleted(task: GenTask): Promise<void> {
-		const replyStr = this.context.formatter.dreamGenerationCompleted(task)
+		const replyStr = this.genFormatter.generationCompleted(task)
 		const message = await this.sendTaskMessage(task, replyStr)
 		if(message){
 			this.context.bot.addReactsToMessage(
@@ -191,7 +182,7 @@ export class GenRunner {
 				this.getFakeCommandResult(task, replyStr),
 				{
 					...displayQueueReact,
-					...reDreamReact
+					...repeatReact
 				}
 			)
 		}
@@ -199,10 +190,6 @@ export class GenRunner {
 		await Promise.all(task.inputImages.map(picture =>
 			this.context.pictureManager.deleteImage(picture)
 		))
-	}
-
-	isTaskRunning(): boolean {
-		return !!this.currentTask
 	}
 
 	private addStdoutParser(task: GenTask): void {
@@ -246,7 +233,7 @@ export class GenRunner {
 			paramsPassedByHuman: task.paramsPassedByHuman,
 			inputPictures: task.inputImages
 		})
-		const entries = ShellQuote.parse(this.context.config.commandTemplate, {
+		const entries = ShellQuote.parse(this.genFormatter.genCmd.commandTemplate, {
 			INPUT_JSON: json
 		})
 
@@ -263,14 +250,6 @@ export class GenRunner {
 		const bin = entries[0] as string
 		const params = entries.slice(1) as string[]
 		return {bin, params, inputJson: json}
-	}
-
-	killCurrentTask(): void {
-		if(!this.currentTask || !this.currentTask.process){
-			throw new Error("Cannot kill current task: no task or process!")
-		}
-
-		this.currentTask.process.kill()
 	}
 
 }

@@ -21,6 +21,41 @@ export interface MessageAttachment {
 	readonly contentType: string | null
 }
 
+export interface HelpCommandDescription {
+	readonly type: "help"
+	readonly for: string
+	readonly text?: DeepTexts<{
+		description: string
+		header: string
+	}>
+}
+
+export interface RepeatCommandDescription {
+	readonly type: "repeat_generation"
+	readonly anyOfLatest: readonly string[]
+	readonly text: DeepTexts<{
+		description: string
+		noPreviousFound: string
+	}>
+}
+
+export interface GenerationCommandDescription {
+	readonly type: "generation"
+	readonly commandTemplate: string
+	readonly params: readonly GenParamDescription[]
+	readonly prompt?: {
+		readonly position: "before_params" | "after_params"
+		readonly maxWordCount?: number
+	}
+	readonly convertInputPicturesTo?: string
+	readonly text?: DeepTexts<{
+		description: string
+		paramDescription: string
+	}>
+}
+
+export type CommandDescription = GenerationCommandDescription | HelpCommandDescription | RepeatCommandDescription
+
 export interface Config {
 	/** Client ID. Get it from here:
 	 * https://discord.com/developers/applications/<your_bot_id>/oauth2/general */
@@ -29,16 +64,15 @@ export interface Config {
 	readonly channelID?: readonly string[]
 	readonly savedPropmtsChannelID?: string
 	readonly starredPromptsChannelID?: string
-	readonly params: readonly GenParamDescription[]
-	readonly commandTemplate: string
 	readonly promptCutoffLimitInDisplay?: number
 	readonly deleteFiledAfterUpload?: boolean
-	readonly maxWordCountInPrompt?: number
 	readonly reactionWaitingTimeSeconds?: number
 	readonly tempPicturesDirectory: string
-	readonly convertPicturesToFormat?: string
 	readonly permissions?: {
 		readonly [commandOrEmote in string]?: readonly string[]
+	}
+	readonly commands: {
+		readonly [k: string]: CommandDescription
 	}
 	readonly repeatedTasks?: readonly ({
 		readonly timeMask: readonly string[]
@@ -63,9 +97,7 @@ export interface Config {
 			requiredParamNotPassed: string
 			pictureTooLarge: string
 		}
-		dream: {
-			description: string
-			paramDescription: string
+		generation: {
 			outputPictureNotFound: PrivatePublicTemplate
 			cannotReadOutputPicture: PrivatePublicTemplate
 			outputPicture: PrivatePublicTemplate
@@ -73,10 +105,6 @@ export interface Config {
 			noParams: string
 			newTaskCreated: PrivatePublicTemplate
 			promptWordsDroppedOnTaskCreation: PrivatePublicTemplate
-		}
-		dreamhelp: {
-			description: string
-			header: string
 		}
 		status: {
 			description: string
@@ -107,10 +135,6 @@ export interface Config {
 			success: PrivatePublicTemplate
 			taskNotFound: string
 		}
-		dreamrepeat: {
-			description: string
-			noPreviousFound: string
-		}
 	}>
 }
 
@@ -129,6 +153,7 @@ export interface GenTaskInput {
 	readonly isSilent: boolean
 	readonly inputImages: readonly string[]
 	readonly command: CommandMessageProperties
+	readonly commandDescription: GenerationCommandDescription
 }
 
 export interface GenTask extends GenTaskInput {

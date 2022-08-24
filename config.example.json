@@ -4,23 +4,148 @@
 	"channelID": ["601126787497590784"],
 	"savedPropmtsChannelID": "846827490843951174",
 	"starredPromptsChannelID": "846827490843951174",
-	"commandTemplate": "node picture_generator_example.js $INPUT_JSON",
 	"promptCutoffLimitInDisplay": 50,
 	"deleteFiledAfterUpload": false,
-	"maxWordCountInPrompt": 77,
 	"reactionWaitingTimeSeconds": 86400,
 	"tempPicturesDirectory": "./tmp_pictures",
-	"convertPicturesToFormat": "jpg",
 	"permissions": {
 		"🤔": ["595903743308857347", "595900578975055885"]
 	},
 	"repeatedTasks": [{
-		"timeMask": ["^.*?:.[05]$"],
+		"timeMask": ["^.*?00:00$"],
 		"command": "dream",
 		"options": {"params": "nya-nya! --silent"},
 		"channelId": "846827490843951174",
 		"userId": "469771750285115392"
 	}],
+	"commands": {
+		"dream": {
+			"type": "generation",
+			"commandTemplate": "node picture_generator_example.js $INPUT_JSON",
+			"prompt": {
+				"position": "before_params",
+				"maxWordCount": 77
+			},
+			"convertInputPicturesTo": "jpg",
+			"text": {
+				"description": "Generate a picture by parameters",
+				"paramDescription": "Prompt and other parameters of generation"
+			},
+			"params": [{
+				"key": ["--silent"],
+				"jsonName": "silent",
+				"role": "silent",
+				"type": "bool",
+				"humanName": "Silent",
+				"description": "hides most of the text output related to task, only pictures remains. reacts also won't be active."
+			}, {
+				"key": ["--private"],
+				"jsonName": "private",
+				"role": "private",
+				"type": "bool",
+				"humanName": "Private",
+				"description": "hides prompt and params from bot output"
+			}, {
+				"key": ["--height", "-H"],
+				"keyHidden": ["-h"],
+				"jsonName": "height",
+				"type": "int",
+				"humanName": "Height",
+				"description": "height of the image",
+				"default": 512
+			}, {
+				"key": ["--width", "-W"],
+				"jsonName": "width",
+				"type": "int",
+				"humanName": "Width",
+				"description": "width of the image",
+				"default": 512
+			}, {
+				"key": ["--cfg_scale", "-C"],
+				"jsonName": "scale",
+				"type": "float",
+				"humanName": "Scale",
+				"description": "CFG scale factor",
+				"default": 7
+			}, {
+				"key": ["--number", "-n"],
+				"jsonName": "number",
+				"type": "int",
+				"default": 1,
+				"humanName": "Number",
+				"description": "number of images"
+			}, {
+				"key": ["--separate-images", "-i"],
+				"jsonName": "separateImages",
+				"type": "bool",
+				"humanName": "Separate images",
+				"description": "returns multiple images as separate files"
+			}, {
+				"key": ["--grid", "-g"],
+				"jsonName": "grid",
+				"type": "bool",
+				"humanName": "Grid",
+				"description": "composite multiple images into grid"
+			}, {
+				"key": ["--sampler", "-A"],
+				"jsonName": "sampler",
+				"type": "enum",
+				"default": "k_lms",
+				"humanName": "Sampler",
+				"allowedValues": ["k_lms", "ddim", "plms", "k_euler", "k_euler_ancestral", "k_neun", "k_dpm_2", "k_dpm_2_ancestral"]
+			}, {
+				"key": ["--steps", "-s"],
+				"jsonName": "steps",
+				"type": "int",
+				"default": 50,
+				"humanName": "Steps",
+				"description": "number of steps"
+			}, {
+				"key": ["--seed", "-S"],
+				"jsonName": "seed",
+				"type": "string",
+				"default": "",
+				"humanName": "Seed",
+				"description": "random seed to use"
+			}, {
+				"key": ["--prior", "-p"],
+				"jsonName": "prior",
+				"type": "string",
+				"default": "",
+				"humanName": "Prior",
+				"description": "vector_adjust_prior"
+			}, {
+				"key": ["--ascii", "-a"],
+				"jsonName": "ascii",
+				"type": "bool",
+				"humanName": "ASCII",
+				"description": "a trip back to 1970"
+			}, {
+				"key": ["--asciicols", "-ac"],
+				"jsonName": "asciiCols",
+				"type": "int",
+				"default": 80,
+				"humanName": "ASCII cols",
+				"description": "if ascii, number of text columns"
+			}]
+		},
+		"dreamhelp": {
+			"type": "help",
+			"for": "dream",
+			"text": {
+				"description": "Displays help about /dream command",
+				"header": "Usage: /dream prompt [params]"
+			}
+		},
+		"dreamrepeat": {
+			"type": "repeat_generation",
+			"anyOfLatest": ["dream"],
+			"text": {
+				"description": "Repeat last /dream command of this user",
+				"noPreviousFound": "Hey $USER, I don't remember you posting any requests. Maybe I did restart since then?"
+			}
+		}
+	},
 	"text": {
 		"lenny": ["( ͡° ͜ʖ ͡°)", "ಥ‿ಥ", "。◕‿‿◕。"],
 		"savedPrompt": "```\n$PROMPT\n$PARAMS_BY_KEYS_NICE\n```",
@@ -41,9 +166,7 @@
 			"requiredParamNotPassed": "No value is provided for parameter $PARAM_KEY, and it has no default. Cannot continue without this value.",
 			"pictureTooLarge": "Cannot upload picture $PICTURES_GENERATED / $PICTURES_EXPECTED for task #$TASK_ID: it is too large ($IMAGE_SIZE)"
 		},
-		"dream": {
-			"description": "Generate a picture by parameters",
-			"paramDescription": "Prompt and other parameters of generation",
+		"generation": {
 			"newTaskCreated": {
 				"public": "Got new task #$TASK_ID: $PROMPT\n$PARAMS_BY_KEYS_NICE",
 				"private": "Got new task #$TASK_ID"
@@ -65,10 +188,6 @@
 				"public": "Failed to read output file $GENERATED_PICTURE_PATH"
 			},
 			"noParams": "Hey $USER, where's parameters? I need them to generate anything, y'know."
-		},
-		"dreamhelp": {
-			"description": "Displays help about /dream command",
-			"header": "Usage: /dream prompt [params]"
 		},
 		"status": {
 			"description": "Display generation queue and currently processed task",
@@ -110,107 +229,6 @@
 				"public": "Killed task #$TASK_ID! :knife:"
 			},
 			"taskNotFound": "Hey $USER, no task is running, what do you want from me, weird human?"
-		},
-		"dreamrepeat": {
-			"description": "Repeat last /dream command of this user",
-			"noPreviousFound": "Hey $USER, I don't remember you posting any requests. Maybe I did restart since then?"
 		}
-	},
-	"params": [{
-		"key": ["--silent"],
-		"jsonName": "silent",
-		"role": "silent",
-		"type": "bool",
-		"humanName": "Silent",
-		"description": "hides most of the text output related to task, only pictures remains. reacts also won't be active."
-	}, {
-		"key": ["--private"],
-		"jsonName": "private",
-		"role": "private",
-		"type": "bool",
-		"humanName": "Private",
-		"description": "hides prompt and params from bot output"
-	}, {
-		"key": ["--height", "-H"],
-		"keyHidden": ["-h"],
-		"jsonName": "height",
-		"type": "int",
-		"humanName": "Height",
-		"description": "height of the image",
-		"default": 512
-	}, {
-		"key": ["--width", "-W"],
-		"jsonName": "width",
-		"type": "int",
-		"humanName": "Width",
-		"description": "width of the image",
-		"default": 512
-	}, {
-		"key": ["--cfg_scale", "-C"],
-		"jsonName": "scale",
-		"type": "float",
-		"humanName": "Scale",
-		"description": "CFG scale factor",
-		"default": 7
-	}, {
-		"key": ["--number", "-n"],
-		"jsonName": "number",
-		"type": "int",
-		"default": 1,
-		"humanName": "Number",
-		"description": "number of images"
-	}, {
-		"key": ["--separate-images", "-i"],
-		"jsonName": "separateImages",
-		"type": "bool",
-		"humanName": "Separate images",
-		"description": "returns multiple images as separate files"
-	}, {
-		"key": ["--grid", "-g"],
-		"jsonName": "grid",
-		"type": "bool",
-		"humanName": "Grid",
-		"description": "composite multiple images into grid"
-	}, {
-		"key": ["--sampler", "-A"],
-		"jsonName": "sampler",
-		"type": "enum",
-		"default": "k_lms",
-		"humanName": "Sampler",
-		"allowedValues": ["k_lms", "ddim", "plms", "k_euler", "k_euler_ancestral", "k_neun", "k_dpm_2", "k_dpm_2_ancestral"]
-	}, {
-		"key": ["--steps", "-s"],
-		"jsonName": "steps",
-		"type": "int",
-		"default": 50,
-		"humanName": "Steps",
-		"description": "number of steps"
-	}, {
-		"key": ["--seed", "-S"],
-		"jsonName": "seed",
-		"type": "string",
-		"default": "",
-		"humanName": "Seed",
-		"description": "random seed to use"
-	}, {
-		"key": ["--prior", "-p"],
-		"jsonName": "prior",
-		"type": "string",
-		"default": "",
-		"humanName": "Prior",
-		"description": "vector_adjust_prior"
-	}, {
-		"key": ["--ascii", "-a"],
-		"jsonName": "ascii",
-		"type": "bool",
-		"humanName": "ASCII",
-		"description": "a trip back to 1970"
-	}, {
-		"key": ["--asciicols", "-ac"],
-		"jsonName": "asciiCols",
-		"type": "int",
-		"default": 80,
-		"humanName": "ASCII cols",
-		"description": "if ascii, number of text columns"
-	}]
+	}
 }

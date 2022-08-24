@@ -1,38 +1,23 @@
 import {BotError} from "bot_error"
 import {AppContext} from "context"
 import {httpGet} from "http_utils"
-import {GenParamDescription, GenParamValue, GenParamValuesObject, GenTaskInput, CommandMessageProperties} from "types"
+import {GenTaskInputWithoutId} from "last_command_repo"
+import {GenParamDescription, GenParamValue, GenParamValuesObject, GenTaskInput, CommandMessageProperties, GenerationCommandDescription} from "types"
 
-let taskIdCounter = 0
+export class InputParser {
+	private genParams: ReadonlyMap<string, GenParamDescription>
 
-export class GenParamParser {
-	private genParams = new Map<string, GenParamDescription>()
-
-	private readonly lastQueryByUser = new Map<string, GenTaskInput>()
 	private readonly privateParamName: string | undefined
 	private readonly silentParamName: string | undefined
 
-	constructor(private readonly context: AppContext) {
-		for(const def of context.config.params){
-			const keys = allKeysOfGenParam(def)
-			for(const key of keys){
-				this.registerParam(key, def)
-			}
-		}
+	constructor(private readonly context: AppContext, private readonly cmd: GenerationCommandDescription, private readonly commandName: string) {
+		this.genParams = makeGenParamMap(cmd)
 
-		const privateParam = context.config.params.find(x => x.type === "bool" && x.role === "private")
+		const privateParam = cmd.params.find(x => x.type === "bool" && x.role === "private")
 		this.privateParamName = privateParam?.jsonName
 
-		const silentParam = context.config.params.find(x => x.type === "bool" && x.role === "silent")
+		const silentParam = cmd.params.find(x => x.type === "bool" && x.role === "silent")
 		this.silentParamName = silentParam?.jsonName
-	}
-
-	private registerParam(key: string, def: GenParamDescription) {
-		const oldDef = this.genParams.get(key)
-		if(oldDef && oldDef !== def){
-			throw new Error(`Bad config! There are two parameters with key ${key}: "${oldDef.jsonName}" and "${def.jsonName}". This won't work well! Fix that.`)
-		}
-		this.genParams.set(key, def)
 	}
 
 	async parse(command: CommandMessageProperties, paramStr: string, msg: CommandMessageProperties): Promise<GenTaskInput> {
@@ -45,11 +30,9 @@ export class GenParamParser {
 		this.checkAndUseDefaults(params, command)
 		const isPrivate = !this.privateParamName ? false : !!params[this.privateParamName]
 		const isSilent = !this.silentParamName ? false : !!params[this.silentParamName]
-		const result: GenTaskInput = {prompt, params, id: 0, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate, isSilent, originalKeyValuePairs, inputImages, command}
+		const result: GenTaskInputWithoutId = {prompt, params, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate, isSilent, originalKeyValuePairs, inputImages, command, commandDescription: this.cmd}
 
-		this.lastQueryByUser.set(result.userId, result)
-
-		return this.makeNew(result)
+		return this.context.lastCommandRepo.put(this.commandName, result)
 	}
 
 	private async loadInputImages(msg: CommandMessageProperties): Promise<string[]> {
@@ -64,31 +47,15 @@ export class GenParamParser {
 
 	}
 
-	getLastQueryOfUser(userId: string): GenTaskInput | undefined {
-		let result = this.lastQueryByUser.get(userId)
-		if(result){
-			result = this.makeNew(result)
-		}
-		return result
-	}
-
-	private makeNew(input: GenTaskInput): GenTaskInput {
-		input = {
-			...input,
-			id: ++taskIdCounter
-		}
-		input = JSON.parse(JSON.stringify(input)) // just to be sure
-		return input
-	}
-
 	private dropExcessWords(prompt: string): [string, number] {
-		if(!this.context.config.maxWordCountInPrompt){
+		const maxWordCount = this.cmd.prompt?.maxWordCount
+		if(!maxWordCount){
 			return [prompt, 0]
 		}
 		let words = prompt.split(/[\s\t\r\n]+/g)
-		const droppedCount = Math.max(0, words.length - this.context.config.maxWordCountInPrompt)
+		const droppedCount = Math.max(0, words.length - maxWordCount)
 		if(droppedCount > 0){
-			words = words.slice(0, this.context.config.maxWordCountInPrompt)
+			words = words.slice(0, maxWordCount)
 			prompt = words.join(" ")
 		}
 		return [prompt, droppedCount]
@@ -180,40 +147,30 @@ export class GenParamParser {
 		}
 	}
 
-	makeHelpStr(): string {
-		const result = [] as [string, string][]
-		let longestKeys = 0
-		for(const def of new Set([...this.genParams.values()])){
-			let keyStr = visibleKeysOf(def).join(", ")
-			keyStr += " (" + def.type + ")"
-			longestKeys = Math.max(longestKeys, keyStr.length)
-			let valueStr = ""
-			if(def.default !== undefined && def.type !== "bool"){
-				valueStr += "[" + def.default + "] "
-			}
-			if(def.description){
-				valueStr += def.description + " "
-			}
-			if(def.type === "enum"){
-				valueStr += "(" + def.allowedValues.join(", ") + ") "
-			}
-			result.push([keyStr, valueStr.trim()])
-		}
-
-		return result.map(([k, v]) => {
-			return k + new Array(longestKeys - k.length + 1).join(" ") + "\t" + v
-		}).join("\n")
-	}
-
 }
 
-function visibleKeysOf(def: GenParamDescription): readonly string[] {
+export function visibleKeysOfGenParam(def: GenParamDescription): readonly string[] {
 	return typeof(def.key) === "string" ? [def.key] : def.key
 }
 
 export function allKeysOfGenParam(def: GenParamDescription): string[] {
 	return [
-		...visibleKeysOf(def),
+		...visibleKeysOfGenParam(def),
 		...(def.keyHidden === undefined ? [] : typeof(def.keyHidden) === "string" ? [def.keyHidden] : def.keyHidden)
 	]
+}
+
+function makeGenParamMap(cmd: GenerationCommandDescription): ReadonlyMap<string, GenParamDescription> {
+	const genParams = new Map<string, GenParamDescription>()
+	for(const def of cmd.params){
+		const keys = allKeysOfGenParam(def)
+		for(const key of keys){
+			const oldDef = genParams.get(key)
+			if(oldDef && oldDef !== def){
+				throw new Error(`Bad config! There are two parameters with key ${key}: "${oldDef.jsonName}" and "${def.jsonName}". This won't work well! Fix that.`)
+			}
+			genParams.set(key, def)
+		}
+	}
+	return genParams
 }

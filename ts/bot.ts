@@ -1,5 +1,5 @@
-import {CommandName, commands} from "bot_commands"
 import {BotError} from "bot_error"
+import {CommandMap, makeCommands} from "commands/bot_commands"
 import {AppContext} from "context"
 import * as Discord from "discord.js"
 import {httpGet} from "http_utils"
@@ -58,6 +58,7 @@ export class Bot {
 	private readonly rest: Discord.REST
 	private readonly commandStorage: InteractionStorage
 	private readonly allowedChannels: Set<string> | null
+	private readonly commands: CommandMap
 
 	getTextChannel(id: string): Discord.TextBasedChannel {
 		const channel = this.client.channels.cache.get(id)
@@ -91,13 +92,15 @@ export class Bot {
 		this.rest = new Discord.REST({
 			version: "10"
 		}).setToken(this.token)
+
+		this.commands = makeCommands(this.context)
 	}
 
 	async start(): Promise<void> {
 		await this.login()
 		const cmdObjects = [] as ReturnType<Discord.SlashCommandBuilder["toJSON"]>[]
-		for(const name in commands){
-			const def = commands[name as CommandName]
+		for(const name in this.commands){
+			const def = this.commands[name]!
 			const builder = new Discord.SlashCommandBuilder()
 			builder.setName(name)
 			const description = def.description(this.context)
@@ -213,7 +216,7 @@ export class Bot {
 		}
 		const commandNameRaw = msgStr.split(" ")[0]!
 		const commandName = commandNameRaw.substring(1)
-		const commandDef = commands[commandName as CommandName]
+		const commandDef = this.commands[commandName]
 		if(!commandDef){
 			return // not our command anyway
 		}
@@ -284,7 +287,7 @@ export class Bot {
 	}
 
 	async runCommand(msg: CommandMessageProperties, interaction?: DefaultInteraction): Promise<void> {
-		const def = commands[msg.command as CommandName]
+		const def = this.commands[msg.command]
 		if(!def){
 			return
 		}

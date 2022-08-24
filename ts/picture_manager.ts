@@ -11,11 +11,7 @@ const allowedFormats: ReadonlySet<string> = new Set(
 
 export class PictureManager {
 
-	constructor(private readonly pictureDir: string, private readonly convertToFormat?: string) {
-		if(convertToFormat){
-			this.checkIsAllowedExt(convertToFormat)
-		}
-	}
+	constructor(private readonly pictureDir: string) {}
 
 	private checkIsAllowedExt(format: string): void {
 		if(!allowedFormats.has(format.toLowerCase())){
@@ -30,7 +26,7 @@ export class PictureManager {
 		await Fs.mkdir(this.pictureDir)
 	}
 
-	async storeImage(mime: string | null, data: Buffer): Promise<string> {
+	async storeImage(mime: string | null, data: Buffer, convertTo?: string): Promise<string> {
 		if(!mime || !mime.startsWith("image/")){
 			throw new Error("Mime-type of the image is not image: " + mime)
 		}
@@ -40,10 +36,11 @@ export class PictureManager {
 		let fullPath: string
 
 		const imageExt = mime.substring("image/".length)
-		if(this.convertToFormat){
+		if(convertTo){
+			this.checkIsAllowedExt(convertTo)
 			this.checkIsAllowedExt(imageExt)
 			const img = await JIMP.create(data)
-			fullPath = pathWithoutExt + "." + this.convertToFormat
+			fullPath = pathWithoutExt + "." + convertTo
 			await img.writeAsync(fullPath)
 		} else {
 			fullPath = pathWithoutExt + "." + imageExt

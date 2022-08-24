@@ -1,15 +1,21 @@
 import {CommandDef, CommandResult, MessageReacts} from "bot"
+import {makeGenerationCommand} from "commands/generation_command"
+import {makeHelpCommand} from "commands/help_command"
+import {makeRepeatCommand} from "commands/repeat_command"
 import {AppContext} from "context"
-import {TaskCommandResult} from "gen_runner"
-import {GenTask} from "types"
+import {GenerationFormatter} from "formatters/generation_formatter"
+import {GenRunner, TaskCommandResult} from "gen_runner"
+import {CommandDescription, GenTask} from "types"
 
-type StartGenResult = CommandResult & {taskId?: number}
-function startGen(context: AppContext, task: GenTask): StartGenResult {
-	let resp = context.formatter.dreamNewTaskCreated(task)
+export type CommandMap = {readonly [cmdName: string]: CommandDef}
+
+export type StartGenResult = CommandResult & {readonly taskId?: number}
+export function startGen(context: AppContext, task: GenTask, formatter: GenerationFormatter, runner: GenRunner): StartGenResult {
+	let resp = formatter.newTaskCreated(task)
 	if(task.droppedPromptWordsCount > 0){
-		resp += "\n\n" + context.formatter.dreamPromptWordsDroppedOnTaskCreation(task)
+		resp += "\n\n" + formatter.promptWordsDroppedOnTaskCreation(task)
 	}
-	context.queue.put(task)
+	context.queue.put(task, runner)
 	return {reply: resp, taskId: task.id}
 }
 
@@ -64,19 +70,40 @@ export const starMessageReact: MessageReacts = {
 	}
 }
 
-export const reDreamReact: MessageReacts = {
+export const repeatReact: MessageReacts = {
 	"🔁": (context, react) => {
 		context.bot.runCommand({
-			command: "dream",
-			options: react.commandMessage.options,
+			...react.commandMessage,
 			channelId: react.channelId,
 			userId: react.reactUserId
 		})
 	}
 }
 
-const _commands = {
-	lenny: cmd({
+export function makeCommands(context: AppContext): CommandMap {
+
+	const result: {[k: string]: CommandDef} = {
+		...defaultCommands
+	}
+
+	for(const commandName in context.config.commands){
+		const description = context.config.commands[commandName]!
+		result[commandName] = makeCommandByDescription(context, commandName, description)
+	}
+
+	return result
+}
+
+function makeCommandByDescription(context: AppContext, name: string, cmd: CommandDescription): CommandDef {
+	switch(cmd.type){
+		case "generation": return makeGenerationCommand(context, name, cmd)
+		case "help": return makeHelpCommand(context, cmd)
+		case "repeat_generation": return makeRepeatCommand(context, cmd)
+	}
+}
+
+const defaultCommands: CommandMap = {
+	lenny: {
 		description: () => "( ͡° ͜ʖ ͡°)",
 		handler: context => {
 			return {reply: context.formatter.lenny()}
@@ -91,60 +118,14 @@ const _commands = {
 				})
 			}
 		}
-	}),
+	},
 
-	dreamhelp: cmd({
-		description: context => context.formatter.dreamhelpDescription(),
-		handler: (context, command) => {
-			let str = context.cmdParser.makeHelpStr()
-			const header = context.formatter.dreamhelpHeader(command)
-			str = (header ? header + "\n\n" : "") + str
-			return {reply: "```\n" + str + "\n```"}
-		}
-	}),
-
-	dream: cmd({
-		description: context => context.formatter.dreamDescription(),
-		params: {
-			params: {
-				type: "string",
-				description: context => context.formatter.dreamParamDescription(),
-				required: true
-			}
-		},
-		reacts: {
-			"🔪": (context, react) => {
-				const taskId = (react.commandResult as StartGenResult).taskId
-				if(taskId){
-					context.bot.runCommand({
-						command: "drop",
-						options: {task_id: taskId},
-						channelId: react.channelId,
-						userId: react.reactUserId
-					})
-				}
-			},
-			...displayQueueReact
-		},
-		handler: async(context, command) => {
-			const paramsStr = command.options.params
-			if(typeof(paramsStr) !== "string"){
-				return {
-					reply: context.formatter.dreamNoParams(command),
-					isRefuse: true
-				}
-			}
-			const task = await context.cmdParser.parse(command, paramsStr, command)
-			return startGen(context, task)
-		}
-	}),
-
-	status: cmd({
+	status: {
 		description: context => context.formatter.statusDescription(),
 		handler: (context, command) => {
 			let result = ""
 
-			const runningTask = context.runner.currentRunningTask
+			const runningTask = context.queue.currentRunningTask
 			if(runningTask){
 				const str = context.formatter.statusRunningTask(runningTask) || ""
 				const prefix = context.formatter.statusRunningTaskPrefix(command) || ""
@@ -204,9 +185,9 @@ const _commands = {
 			},
 			...displayQueueReact
 		}
-	}),
+	},
 
-	drop: cmd({
+	drop: {
 		description: context => context.formatter.dropDescription(),
 		params: {
 			task_id: {
@@ -223,9 +204,9 @@ const _commands = {
 					isRefuse: true
 				}
 			}
-			const currentTask = context.runner.currentRunningTask
+			const currentTask = context.queue.currentRunningTask
 			if(currentTask && currentTask.id === taskId){
-				context.runner.killCurrentTask()
+				context.queue.killCurrentTask()
 				return {
 					reply: context.formatter.dropKilledRunningTask(command, currentTask)
 				}
@@ -239,35 +220,35 @@ const _commands = {
 				isRefuse: true
 			}
 		}
-	}),
+	},
 
-	purge: cmd({
+	purge: {
 		description: context => context.formatter.purgeDescription(),
 		handler: (context, command) => {
 			context.queue.clear()
-			if(context.runner.currentRunningTask){
-				context.runner.killCurrentTask()
+			if(context.queue.currentRunningTask){
+				context.queue.killCurrentTask()
 			}
 			return {reply: context.formatter.purgeCompleted(command)}
 		},
 		reacts: displayQueueReact
-	}),
+	},
 
-	clear: cmd({
+	clear: {
 		description: context => context.formatter.clearDescription(),
 		handler: (context, command) => {
 			context.queue.clear()
 			return {reply: context.formatter.clearCompleted(command)}
 		},
 		reacts: displayQueueReact
-	}),
+	},
 
-	kill: cmd({
+	kill: {
 		description: context => context.formatter.killDescription(),
 		handler: (context, command) => {
-			const currentTask = context.runner.currentRunningTask
+			const currentTask = context.queue.currentRunningTask
 			if(currentTask){
-				context.runner.killCurrentTask()
+				context.queue.killCurrentTask()
 				return {reply: context.formatter.killSuccess(command, currentTask)}
 			} else {
 				return {
@@ -277,28 +258,5 @@ const _commands = {
 			}
 		},
 		reacts: displayQueueReact
-	}),
-
-	dreamrepeat: cmd({
-		description: context => context.formatter.dreamrepeatDescription(),
-		handler: (context, command) => {
-			const task = context.cmdParser.getLastQueryOfUser(command.userId)
-			if(!task){
-				return {
-					reply: context.formatter.dreamrepeatNoPreviousFound(command),
-					isRefuse: true
-				}
-			}
-			return startGen(context, task)
-		}
-	})
-}
-
-export type CommandName = keyof typeof _commands
-
-export const commands = _commands as {readonly [name in CommandName]: CommandDef}
-
-// just for typecasting
-function cmd<P extends string, R extends CommandResult>(def: CommandDef<R, P>): CommandDef<R, P> {
-	return def
+	}
 }
