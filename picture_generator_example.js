@@ -17,6 +17,10 @@ async function main() {
 	// stderr logs can be seen in bot's own stderr
 	process.stderr.write("Got parameters! " + JSON.stringify(parameters) + "\n")
 
+	if(parameters.prompt){
+		process.stdout.write(JSON.stringify({updatedPrompt: parameters.prompt + ", nya!"}) + "\n")
+	}
+
 	const willGenerateFilesCount = 2
 	
 	// let's tell the bot how many pictures to expect

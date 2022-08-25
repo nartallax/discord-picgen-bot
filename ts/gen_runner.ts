@@ -12,7 +12,7 @@ import {displayQueueReact, repeatReact, saveMessageReact, starMessageReact} from
 import {CommandResult} from "bot"
 import {GenerationFormatter} from "formatters/generation_formatter"
 
-type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine | MessageLine
+type OutputLine = GeneratedFileLine | ErrorLine | ExpectedPicturesLine | MessageLine | UpdatedPromptLine
 
 export type TaskCommandResult = CommandResult & {
 	task: GenTaskInput
@@ -46,6 +46,13 @@ interface ExpectedPicturesLine {
 }
 function isExpectedPicturesLine(line: OutputLine): line is ExpectedPicturesLine {
 	return typeof((line as ExpectedPicturesLine).willGenerateCount) === "number"
+}
+
+interface UpdatedPromptLine {
+	updatedPrompt: string
+}
+function isUpdatedPromptLine(line: OutputLine): line is UpdatedPromptLine {
+	return typeof((line as UpdatedPromptLine).updatedPrompt) === "string"
 }
 
 export class GenRunner {
@@ -219,6 +226,8 @@ export class GenRunner {
 					await this.sendResult(task, line)
 				} else if(isExpectedPicturesLine(line)){
 					task.totalExpectedPictures = line.willGenerateCount
+				} else if(isUpdatedPromptLine(line)){
+					task.prompt = line.updatedPrompt
 				} else {
 					console.error("Unknown action in line " + lineStr + ". Skipping it.")
 				}

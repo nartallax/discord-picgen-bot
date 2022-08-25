@@ -153,7 +153,7 @@ export interface Config {
 }
 
 export interface GenTaskInput {
-	readonly prompt: string
+	prompt: string
 	readonly rawInputString: string
 	readonly rawParamString: string
 	readonly userId: string
