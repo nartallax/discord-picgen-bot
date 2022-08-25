@@ -68,6 +68,13 @@ export class StaticFormatter extends Formatter {
 		return this.format(this.t.clear?.completed, this.makeCommandParams(cmd))
 	}
 
+	pingReply(cmd: CommandPropsShort, timeDiffSeconds: number): string {
+		return this.format(this.t.ping?.reply, {
+			...this.makeCommandParams(cmd),
+			TIME_DIFF: this.formatTimeSpan(timeDiffSeconds)
+		}) || "pong!"
+	}
+
 	killSuccess(cmd: CommandPropsShort, task: GenTask): string | undefined {
 		if(task.isSilent){
 			return undefined
@@ -88,6 +95,10 @@ export class StaticFormatter extends Formatter {
 
 	killDescription(): string | undefined {
 		return this.format(this.t.kill?.description, {})
+	}
+
+	pingDescription(): string | undefined {
+		return this.format(this.t.ping?.description, {})
 	}
 
 	purgeDescription(): string | undefined {

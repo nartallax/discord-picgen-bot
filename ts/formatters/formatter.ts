@@ -68,6 +68,17 @@ export abstract class Formatter {
 			: `${minutes}:${td(seconds)}`
 	}
 
+	protected formatTimeSpan(timeSpanInSeconds: number): string {
+		const seconds = Math.round(timeSpanInSeconds % 60)
+		timeSpanInSeconds = (timeSpanInSeconds - seconds) / 60
+		const minutes = timeSpanInSeconds % 60
+		timeSpanInSeconds = (timeSpanInSeconds - minutes) / 60
+		const hours = timeSpanInSeconds
+		return hours
+			? `${hours}:${td(minutes)}:${td(seconds)}`
+			: `${minutes}:${td(seconds)}`
+	}
+
 	protected paramsToNiceString(task: GenTask, onlyUserPassed: boolean, allParams: readonly GenParamDescription[]): string {
 		const params = this.jsonNamesOfTaskParams(task, onlyUserPassed, allParams)
 		const paramMap = new Map(allParams.map(x => [x.jsonName, x]))

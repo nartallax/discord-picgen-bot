@@ -14,6 +14,7 @@ export interface CommandMessageProperties<P extends string = string> {
 	readonly command: string
 	readonly options: CommandOptionsObject<P>
 	readonly attachments?: readonly MessageAttachment[]
+	readonly creationTime?: number
 }
 
 export interface MessageAttachment {
@@ -81,6 +82,10 @@ export interface Config {
 		lenny: string
 		savedPrompt: string
 		starredPrompt: string
+		ping: {
+			description: string
+			reply: string
+		}
 		errors: {
 			cannotResolveGuild: string
 			cannotResolveMember: string

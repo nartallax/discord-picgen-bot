@@ -278,7 +278,8 @@ export class Bot {
 			command: commandName,
 			options: opts,
 			userId: message.author.id,
-			attachments
+			attachments,
+			creationTime: message.createdTimestamp
 		})
 	}
 
@@ -296,7 +297,8 @@ export class Bot {
 			channelId: interaction.channelId,
 			command: interaction.commandName,
 			options: opts,
-			userId: interaction.user.id
+			userId: interaction.user.id,
+			creationTime: interaction.createdTimestamp
 		}, interaction)
 	}
 

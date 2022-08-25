@@ -258,5 +258,15 @@ const defaultCommands: CommandMap = {
 			}
 		},
 		reacts: displayQueueReact
+	},
+
+	ping: {
+		description: context => context.formatter.pingDescription(),
+		handler: (context, command) => {
+			const timeDiff = Math.max(0, (Date.now() - (command.creationTime || 0)) / 1000)
+			return {
+				reply: context.formatter.pingReply(command, timeDiff)
+			}
+		}
 	}
 }

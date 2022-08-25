@@ -229,6 +229,10 @@
 				"public": "Killed task #$TASK_ID! :knife:"
 			},
 			"taskNotFound": "Hey $USER, no task is running, what do you want from me, weird human?"
+		},
+		"ping": {
+			"description": "Ping!",
+			"reply": "$USER, time between message sent and receive is $TIME_DIFF (roughly)"
 		}
 	}
 }
