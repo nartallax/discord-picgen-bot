@@ -50,6 +50,13 @@ export class GenerationFormatter extends Formatter {
 		return this.format(this.selectPrivatePublic(task, this.t.generation?.newTaskCreated), this.makeTaskParams(task))
 	}
 
+	newTaskCreatedPaused(task: GenTask): string | undefined {
+		if(task.isSilent){
+			return undefined
+		}
+		return this.format(this.selectPrivatePublic(task, this.t.generation?.newTaskCreatedPaused), this.makeTaskParams(task))
+	}
+
 	promptWordsDroppedOnTaskCreation(task: GenTask): string | undefined {
 		if(task.isSilent){
 			return undefined

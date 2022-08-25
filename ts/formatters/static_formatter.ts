@@ -68,6 +68,14 @@ export class StaticFormatter extends Formatter {
 		return this.format(this.t.clear?.completed, this.makeCommandParams(cmd))
 	}
 
+	pauseReply(cmd: CommandPropsShort): string | undefined {
+		return this.format(this.t.pause?.reply, this.makeCommandParams(cmd))
+	}
+
+	unpauseReply(cmd: CommandPropsShort): string | undefined {
+		return this.format(this.t.unpause?.reply, this.makeCommandParams(cmd))
+	}
+
 	pingReply(cmd: CommandPropsShort, timeDiffSeconds: number): string {
 		return this.format(this.t.ping?.reply, {
 			...this.makeCommandParams(cmd),
@@ -89,32 +97,40 @@ export class StaticFormatter extends Formatter {
 		return this.format(this.t.kill?.taskNotFound, this.makeCommandParams(cmd))
 	}
 
-	dropDescription(): string | undefined {
-		return this.format(this.t.drop?.description, {})
+	pauseDescription(): string {
+		return this.format(this.t.pause?.description, {}) || ""
 	}
 
-	killDescription(): string | undefined {
-		return this.format(this.t.kill?.description, {})
+	unpauseDescription(): string {
+		return this.format(this.t.unpause?.description, {}) || ""
 	}
 
-	pingDescription(): string | undefined {
-		return this.format(this.t.ping?.description, {})
+	dropDescription(): string {
+		return this.format(this.t.drop?.description, {}) || ""
 	}
 
-	purgeDescription(): string | undefined {
-		return this.format(this.t.purge?.description, {})
+	killDescription(): string {
+		return this.format(this.t.kill?.description, {}) || ""
 	}
 
-	clearDescription(): string | undefined {
-		return this.format(this.t.clear?.description, {})
+	pingDescription(): string {
+		return this.format(this.t.ping?.description, {}) || ""
 	}
 
-	statusDescription(): string | undefined {
-		return this.format(this.t.status?.description, {})
+	purgeDescription(): string {
+		return this.format(this.t.purge?.description, {}) || ""
 	}
 
-	dropTaskIdDescription(): string | undefined {
-		return this.format(this.t.drop?.taskIdDescription, {})
+	clearDescription(): string {
+		return this.format(this.t.clear?.description, {}) || ""
+	}
+
+	statusDescription(): string {
+		return this.format(this.t.status?.description, {}) || ""
+	}
+
+	dropTaskIdDescription(): string {
+		return this.format(this.t.drop?.taskIdDescription, {}) || ""
 	}
 
 	lenny(): string {

@@ -11,9 +11,17 @@ export type CommandMap = {readonly [cmdName: string]: CommandDef}
 
 export type StartGenResult = CommandResult & {readonly taskId?: number}
 export function startGen(context: AppContext, task: GenTask, formatter: GenerationFormatter, runner: GenRunner): StartGenResult {
-	let resp = formatter.newTaskCreated(task)
+	let resp: string | undefined
+	if(context.queue.isPaused){
+		resp = formatter.newTaskCreatedPaused(task)
+	} else {
+		resp = formatter.newTaskCreated(task)
+	}
 	if(task.droppedPromptWordsCount > 0){
-		resp += "\n\n" + formatter.promptWordsDroppedOnTaskCreation(task)
+		const wordsDropped = formatter.promptWordsDroppedOnTaskCreation(task)
+		if(wordsDropped){
+			resp = (resp ? resp + "\n\n" : "") + wordsDropped
+		}
 	}
 	context.queue.put(task, runner)
 	return {reply: resp, taskId: task.id}
@@ -268,5 +276,24 @@ const defaultCommands: CommandMap = {
 				reply: context.formatter.pingReply(command, timeDiff)
 			}
 		}
+	},
+
+	pause: {
+		description: context => context.formatter.pauseDescription(),
+		handler: (context, command) => {
+			context.queue.pause()
+			return {reply: context.formatter.pauseReply(command)}
+		},
+		reacts: displayQueueReact
+	},
+
+	unpause: {
+		description: context => context.formatter.unpauseDescription(),
+		handler: (context, command) => {
+			context.queue.unpause()
+			return {reply: context.formatter.unpauseReply(command)}
+		},
+		reacts: displayQueueReact
 	}
+
 }

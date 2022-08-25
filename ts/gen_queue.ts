@@ -6,12 +6,26 @@ import {errToString} from "utils"
 export class GenQueue {
 
 	private currentTask: GenTask | null = null
+	private paused = false
+
+	get isPaused(): boolean {
+		return this.paused
+	}
 
 	get currentRunningTask(): GenTask | null {
 		return this.currentTask
 	}
 
 	constructor(private readonly context: AppContext) {}
+
+	pause(): void {
+		this.paused = true
+	}
+
+	unpause(): void {
+		this.paused = false
+		this.tryStart()
+	}
 
 	private arr: [GenTask, GenRunner][] = []
 
@@ -49,7 +63,7 @@ export class GenQueue {
 	}
 
 	async tryStart(): Promise<void> {
-		if(this.currentTask){
+		if(this.currentTask || this.paused){
 			return
 		}
 		const input = this.get()

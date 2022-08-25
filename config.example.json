@@ -150,6 +150,14 @@
 		"lenny": ["( ͡° ͜ʖ ͡°)", "ಥ‿ಥ", "。◕‿‿◕。"],
 		"savedPrompt": "```\n$PROMPT\n$PARAMS_BY_KEYS_NICE\n```",
 		"starredPrompt": "THIS is nice! I like that!",
+		"pause": {
+			"description": "This will pause the queue.",
+			"reply": "Paused!"
+		},
+		"unpause": {
+			"description": "This will unpause the queue.",
+			"reply": "Unpaused!"
+		},
 		"errors": {
 			"cannotResolveGuild": "Cannot get guild $GUILD_ID!",
 			"cannotResolveMember": "Cannot get member $USER_ID!",
@@ -170,6 +178,9 @@
 			"newTaskCreated": {
 				"public": "Got new task #$TASK_ID: $PROMPT\n$PARAMS_BY_KEYS_NICE",
 				"private": "Got new task #$TASK_ID"
+			},
+			"newTaskCreatedPaused": {
+				"public": "Got new task #$TASK_ID: $PROMPT\n$PARAMS_BY_KEYS_NICE (it won't run just yet, because queue is paused)"
 			},
 			"outputPicture": {
 				"public": "Picture $PICTURES_GENERATED / $PICTURES_EXPECTED in task #$TASK_ID, $TIME_PASSED"

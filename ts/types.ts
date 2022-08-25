@@ -86,6 +86,14 @@ export interface Config {
 			description: string
 			reply: string
 		}
+		pause: {
+			description: string
+			reply: string
+		}
+		unpause: {
+			description: string
+			reply: string
+		}
 		errors: {
 			cannotResolveGuild: string
 			cannotResolveMember: string
@@ -109,6 +117,7 @@ export interface Config {
 			generationCompleted: PrivatePublicTemplate
 			noParams: string
 			newTaskCreated: PrivatePublicTemplate
+			newTaskCreatedPaused: PrivatePublicTemplate
 			promptWordsDroppedOnTaskCreation: PrivatePublicTemplate
 		}
 		status: {
