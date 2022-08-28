@@ -9,11 +9,12 @@ export type CommandPropsShort = {
 }
 
 export abstract class Formatter {
-	protected readonly t: DropUndef<Config["text"]>
 
-	constructor(protected readonly context: AppContext) {
-		this.t = context.config.text || {}
+	protected get t(): DropUndef<Config["text"]> {
+		return this.context.config.text || {}
 	}
+
+	constructor(protected readonly context: AppContext) {}
 
 	protected formatFileSize(size: number): string {
 		if(size < 1024){

@@ -69,6 +69,7 @@ export interface Config {
 	readonly deleteFiledAfterUpload?: boolean
 	readonly reactionWaitingTimeSeconds?: number
 	readonly tempPicturesDirectory: string
+	readonly maxTasksShownInStatus?: number
 	readonly permissions?: {
 		readonly [commandOrEmote in string]?: readonly string[]
 	}
@@ -127,6 +128,7 @@ export interface Config {
 			runningTasksPrefix: string
 			queuedTasksPrefix: string
 			noTasks: string
+			tasksUnshown: string
 		}
 		drop: {
 			description: string

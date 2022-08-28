@@ -7,6 +7,7 @@
 	"promptCutoffLimitInDisplay": 50,
 	"deleteFiledAfterUpload": false,
 	"reactionWaitingTimeSeconds": 86400,
+	"maxTasksShownInStatus": 3,
 	"tempPicturesDirectory": "./tmp_pictures",
 	"permissions": {
 		"🤔": ["595903743308857347", "595900578975055885"]
@@ -212,7 +213,8 @@
 				"public": "#**$TASK_ID**: $PROMPT_SHORT",
 				"private": "#**$TASK_ID**: <prompt hidden>"
 			},
-			"noTasks": "Nothing going on!"
+			"noTasks": "Nothing going on!",
+			"tasksUnshown": "(...and $TASKS_UNSHOWN more task(s))"
 		},
 		"drop": {
 			"description": "Drop a specific task by its ID",

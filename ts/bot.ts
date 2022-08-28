@@ -94,6 +94,26 @@ export class Bot {
 		}).setToken(this.token)
 
 		this.commands = makeCommands(this.context)
+
+		this.client.on("shardDisconnect", () => {
+			console.error("DISCONNECT!")
+		})
+
+		this.client.on("shardReconnecting", () => {
+			console.error("Reconnecting...")
+		})
+
+		this.client.on("shardError", e => {
+			console.error("Connection error: " + errToString(e))
+		})
+
+		this.client.on("error", e => {
+			console.error("Bot error: " + errToString(e))
+		})
+
+		this.client.on("warn", e => {
+			console.error("Bot warning: " + e)
+		})
 	}
 
 	async start(): Promise<void> {

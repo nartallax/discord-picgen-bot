@@ -76,6 +76,13 @@ export class StaticFormatter extends Formatter {
 		return this.format(this.t.unpause?.reply, this.makeCommandParams(cmd))
 	}
 
+	statusTasksUnshown(cmd: CommandPropsShort, unshownCount: number): string | undefined {
+		return this.format(this.t.status?.tasksUnshown, {
+			...this.makeCommandParams(cmd),
+			TASKS_UNSHOWN: unshownCount + ""
+		})
+	}
+
 	pingReply(cmd: CommandPropsShort, timeDiffSeconds: number): string {
 		return this.format(this.t.ping?.reply, {
 			...this.makeCommandParams(cmd),

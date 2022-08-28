@@ -28,8 +28,8 @@ export function startGen(context: AppContext, task: GenTask, formatter: Generati
 }
 
 export const displayQueueReact: MessageReacts = {
-	"🗒️": (context, reaction) => {
-		context.bot.runCommand({
+	"🗒️": async(context, reaction) => {
+		await context.bot.runCommand({
 			channelId: reaction.channelId,
 			command: "status",
 			options: {},
@@ -79,8 +79,8 @@ export const starMessageReact: MessageReacts = {
 }
 
 export const repeatReact: MessageReacts = {
-	"🔁": (context, react) => {
-		context.bot.runCommand({
+	"🔁": async(context, react) => {
+		await context.bot.runCommand({
 			...react.commandMessage,
 			channelId: react.channelId,
 			userId: react.reactUserId
@@ -117,8 +117,8 @@ const defaultCommands: CommandMap = {
 			return {reply: context.formatter.lenny()}
 		},
 		reacts: {
-			"🤔": (context, reaction) => {
-				context.bot.runCommand({
+			"🤔": async(context, reaction) => {
+				await context.bot.runCommand({
 					command: "lenny",
 					options: {},
 					channelId: reaction.channelId,
@@ -141,7 +141,9 @@ const defaultCommands: CommandMap = {
 			}
 
 			let queueStr = ""
-			for(const queuedItem of context.queue){
+			const queuedItems = [...context.queue]
+			const maxTasksShownInStatus = context.config.maxTasksShownInStatus || 10
+			for(const queuedItem of queuedItems.slice(0, maxTasksShownInStatus)){
 				const str = context.formatter.statusQueuedTask(queuedItem) || ""
 				if(str){
 					if(queueStr){
@@ -150,6 +152,11 @@ const defaultCommands: CommandMap = {
 					queueStr += str
 				}
 			}
+			const unshownTasksCount = Math.max(0, queuedItems.length - maxTasksShownInStatus)
+			if(unshownTasksCount > 0){
+				queueStr += "\n" + context.formatter.statusTasksUnshown(command, unshownTasksCount)
+			}
+
 			if(queueStr){
 				const queuePrefix = context.formatter.statusQueuedTaskPrefix(command) || ""
 				if(result){
@@ -167,24 +174,24 @@ const defaultCommands: CommandMap = {
 			return {reply: result, isRefuse}
 		},
 		reacts: {
-			"🔪": (context, react) => {
-				context.bot.runCommand({
+			"🔪": async(context, react) => {
+				await context.bot.runCommand({
 					command: "kill",
 					options: {},
 					channelId: react.channelId,
 					userId: react.reactUserId
 				})
 			},
-			"🔥": (context, react) => {
-				context.bot.runCommand({
+			"🔥": async(context, react) => {
+				await context.bot.runCommand({
 					command: "purge",
 					options: {},
 					channelId: react.channelId,
 					userId: react.reactUserId
 				})
 			},
-			"🧼": (context, react) => {
-				context.bot.runCommand({
+			"🧼": async(context, react) => {
+				await context.bot.runCommand({
 					...react.commandMessage,
 					command: "clear",
 					options: {},

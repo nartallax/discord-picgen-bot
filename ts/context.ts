@@ -7,7 +7,7 @@ import {StaticFormatter} from "formatters/static_formatter"
 import {LastCommandRepo} from "last_command_repo"
 
 export interface AppContext {
-	readonly config: Config
+	config: Config
 	readonly queue: GenQueue
 	readonly bot: Bot
 	readonly formatter: StaticFormatter
