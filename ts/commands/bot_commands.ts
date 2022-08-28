@@ -1,4 +1,4 @@
-import {Bot, CommandDef, CommandResult, MessageReacts} from "bot"
+import {CommandDef, CommandResult, MessageReacts} from "bot"
 import {makeGenerationCommand} from "commands/generation_command"
 import {makeHelpCommand} from "commands/help_command"
 import {makeRepeatCommand} from "commands/repeat_command"
@@ -27,6 +27,7 @@ export function startGen(context: AppContext, task: GenTask, formatter: Generati
 	return {reply: resp, taskId: task.id}
 }
 
+// FIXME: reacts should be tighly coupled with commands, and should check permissions before invoking commands
 export const displayQueueReact: MessageReacts = {
 	"🗒️": async(context, reaction) => {
 		await context.bot.runCommand({
