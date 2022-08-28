@@ -22,7 +22,7 @@ export function makeGenerationCommand(context: AppContext, commandName: string, 
 			}
 		},
 		reacts: {
-			"🔪": (context, reaction) => {
+			"🔫": (context, reaction) => {
 				const taskId = (reaction.commandResult as StartGenResult).taskId
 				if(taskId){
 					context.bot.runCommand({
