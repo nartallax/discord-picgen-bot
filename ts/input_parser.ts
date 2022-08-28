@@ -30,7 +30,7 @@ export class InputParser {
 		this.checkAndUseDefaults(params, command)
 		const isPrivate = !this.privateParamName ? false : !!params[this.privateParamName]
 		const isSilent = !this.silentParamName ? false : !!params[this.silentParamName]
-		const result: GenTaskInputWithoutId = {prompt, params, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate, isSilent, originalKeyValuePairs, inputImages, command, commandDescription: this.cmd}
+		const result: GenTaskInputWithoutId = {prompt, params, channelId: msg.channelId, paramsPassedByHuman, rawInputString: paramStr, rawParamString: paramsArr.join(" "), userId: msg.userId, droppedPromptWordsCount: droppedWords, isPrivate, isSilent, originalKeyValuePairs, inputImages, command, commandDescription: this.cmd, roleName: command.roleName ?? null}
 
 		return this.context.lastCommandRepo.put(this.commandName, result)
 	}

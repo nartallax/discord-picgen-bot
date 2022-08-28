@@ -15,6 +15,7 @@ export interface CommandMessageProperties<P extends string = string> {
 	readonly options: CommandOptionsObject<P>
 	readonly attachments?: readonly MessageAttachment[]
 	readonly creationTime?: number
+	readonly roleName: string | null
 }
 
 export interface MessageAttachment {
@@ -70,6 +71,7 @@ export interface Config {
 	readonly reactionWaitingTimeSeconds?: number
 	readonly tempPicturesDirectory: string
 	readonly maxTasksShownInStatus?: number
+	readonly namedRoles?: readonly [string, readonly string[]][]
 	readonly permissions?: {
 		readonly [commandOrEmote in string]?: readonly string[]
 	}
@@ -156,6 +158,7 @@ export interface Config {
 
 export interface GenTaskInput {
 	prompt: string
+	readonly roleName: string | null
 	readonly rawInputString: string
 	readonly rawParamString: string
 	readonly userId: string

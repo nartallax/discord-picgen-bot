@@ -1,4 +1,4 @@
-import {CommandDef, CommandResult, MessageReacts} from "bot"
+import {Bot, CommandDef, CommandResult, MessageReacts} from "bot"
 import {makeGenerationCommand} from "commands/generation_command"
 import {makeHelpCommand} from "commands/help_command"
 import {makeRepeatCommand} from "commands/repeat_command"
@@ -30,6 +30,7 @@ export function startGen(context: AppContext, task: GenTask, formatter: Generati
 export const displayQueueReact: MessageReacts = {
 	"🗒️": async(context, reaction) => {
 		await context.bot.runCommand({
+			roleName: context.bot.getRoleName(reaction.reactUserId),
 			channelId: reaction.channelId,
 			command: "status",
 			options: {},
@@ -79,11 +80,13 @@ export const starMessageReact: MessageReacts = {
 }
 
 export const repeatReact: MessageReacts = {
-	"🔁": async(context, react) => {
+	"🔁": async(context, reaction) => {
 		await context.bot.runCommand({
-			...react.commandMessage,
-			channelId: react.channelId,
-			userId: react.reactUserId
+			roleName: context.bot.getRoleName(reaction.reactUserId),
+			command: reaction.commandMessage.command,
+			options: reaction.commandMessage.options,
+			channelId: reaction.channelId,
+			userId: reaction.reactUserId
 		})
 	}
 }
@@ -119,6 +122,7 @@ const defaultCommands: CommandMap = {
 		reacts: {
 			"🤔": async(context, reaction) => {
 				await context.bot.runCommand({
+					roleName: context.bot.getRoleName(reaction.reactUserId),
 					command: "lenny",
 					options: {},
 					channelId: reaction.channelId,
@@ -174,28 +178,31 @@ const defaultCommands: CommandMap = {
 			return {reply: result, isRefuse}
 		},
 		reacts: {
-			"🔪": async(context, react) => {
+			"🔪": async(context, reaction) => {
 				await context.bot.runCommand({
+					roleName: context.bot.getRoleName(reaction.reactUserId),
 					command: "kill",
 					options: {},
-					channelId: react.channelId,
-					userId: react.reactUserId
+					channelId: reaction.channelId,
+					userId: reaction.reactUserId
 				})
 			},
-			"🔥": async(context, react) => {
+			"🔥": async(context, reaction) => {
 				await context.bot.runCommand({
+					roleName: context.bot.getRoleName(reaction.reactUserId),
 					command: "purge",
 					options: {},
-					channelId: react.channelId,
-					userId: react.reactUserId
+					channelId: reaction.channelId,
+					userId: reaction.reactUserId
 				})
 			},
-			"🧼": async(context, react) => {
+			"🧼": async(context, reaction) => {
 				await context.bot.runCommand({
-					...react.commandMessage,
+					roleName: context.bot.getRoleName(reaction.reactUserId),
 					command: "clear",
 					options: {},
-					userId: react.reactUserId
+					channelId: reaction.channelId,
+					userId: reaction.reactUserId
 				})
 			},
 			...displayQueueReact

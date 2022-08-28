@@ -299,7 +299,8 @@ export class Bot {
 			options: opts,
 			userId: message.author.id,
 			attachments,
-			creationTime: message.createdTimestamp
+			creationTime: message.createdTimestamp,
+			roleName: this.getRoleName(message.author.id)
 		})
 	}
 
@@ -318,7 +319,8 @@ export class Bot {
 			command: interaction.commandName,
 			options: opts,
 			userId: interaction.user.id,
-			creationTime: interaction.createdTimestamp
+			creationTime: interaction.createdTimestamp,
+			roleName: this.getRoleName(interaction.user.id)
 		}, interaction)
 	}
 
@@ -449,15 +451,7 @@ export class Bot {
 			return // no allow-list = allow everyone
 		}
 
-		const guild = this.client.guilds.cache.get(this.context.config.guildID)
-		if(!guild){
-			throw new BotError(this.context.formatter.errorCannotResolveGuild(this.context.config.guildID))
-		}
-
-		const member = guild.members.cache.get(userId)
-		if(!member){
-			throw new BotError(this.context.formatter.errorCannotResolveMember(userId))
-		}
+		const member = this.getMember(userId)
 
 		for(const roleId of allowedRoles){
 			const role = member.roles.cache.get(roleId)
@@ -467,6 +461,41 @@ export class Bot {
 		}
 
 		throw new BotError(this.context.formatter.errorActionNotAllowed(commandOrEmote, userId))
+	}
+
+	private getGuild(): Discord.Guild {
+		const guild = this.client.guilds.cache.get(this.context.config.guildID)
+		if(!guild){
+			throw new BotError(this.context.formatter.errorCannotResolveGuild(this.context.config.guildID))
+		}
+		return guild
+	}
+
+	private getMember(userId: string): Discord.GuildMember {
+		const guild = this.getGuild()
+		const member = guild.members.cache.get(userId)
+		if(!member){
+			throw new BotError(this.context.formatter.errorCannotResolveMember(userId))
+		}
+		return member
+	}
+
+	getRoleName(userId: string): string | null {
+		const roleNames = this.context.config.namedRoles
+		if(!roleNames){
+			return null
+		}
+
+		const member = this.getMember(userId)
+		for(const [roleName, roleIds] of roleNames){
+			for(const roleId of roleIds){
+				if(member.roles.cache.get(roleId)){
+					return roleName
+				}
+			}
+		}
+
+		return null
 	}
 
 }

@@ -22,14 +22,15 @@ export function makeGenerationCommand(context: AppContext, commandName: string, 
 			}
 		},
 		reacts: {
-			"🔪": (context, react) => {
-				const taskId = (react.commandResult as StartGenResult).taskId
+			"🔪": (context, reaction) => {
+				const taskId = (reaction.commandResult as StartGenResult).taskId
 				if(taskId){
 					context.bot.runCommand({
+						roleName: context.bot.getRoleName(reaction.reactUserId),
 						command: "drop",
 						options: {task_id: taskId},
-						channelId: react.channelId,
-						userId: react.reactUserId
+						channelId: reaction.channelId,
+						userId: reaction.reactUserId
 					})
 				}
 			},

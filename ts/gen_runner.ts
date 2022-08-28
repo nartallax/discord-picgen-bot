@@ -238,6 +238,7 @@ export class GenRunner {
 	private makeCommand(task: GenTask): {bin: string, params: readonly string[], inputJson: string} {
 		const json = JSON.stringify({
 			prompt: task.prompt,
+			roleName: task.roleName,
 			...task.params,
 			paramsPassedByHuman: task.paramsPassedByHuman,
 			inputPictures: task.inputImages
