@@ -32,7 +32,11 @@ export class HelpFormatter extends Formatter {
 		const result = [] as [string, string][]
 		let longestKeys = 0
 		for(const def of this.params){
-			let keyStr = visibleKeysOfGenParam(def).join(", ")
+			const visibleKeys = visibleKeysOfGenParam(def)
+			if(visibleKeys.length < 1){
+				continue
+			}
+			let keyStr = visibleKeys.join(", ")
 			keyStr += " (" + def.type + ")"
 			longestKeys = Math.max(longestKeys, keyStr.length)
 			let valueStr = ""

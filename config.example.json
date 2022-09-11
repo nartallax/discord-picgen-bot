@@ -161,7 +161,8 @@
 		},
 		"unpause": {
 			"description": "This will unpause the queue.",
-			"reply": "Unpaused!"
+			"reply": "Unpaused! Next up: #$TASK_ID",
+			"replyNoTask": "Unpaused! but nothing to do."
 		},
 		"errors": {
 			"cannotResolveGuild": "Cannot get guild $GUILD_ID!",

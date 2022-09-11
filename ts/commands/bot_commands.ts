@@ -306,7 +306,9 @@ const defaultCommands: CommandMap = {
 		description: context => context.formatter.unpauseDescription(),
 		handler: (context, command) => {
 			context.queue.unpause()
-			return {reply: context.formatter.unpauseReply(command)}
+			const task = context.queue.currentRunningTask
+			const reply = task ? context.formatter.unpauseReply(command, task) : context.formatter.unpauseReplyNoTask(command)
+			return {reply}
 		},
 		reacts: displayQueueReact
 	}

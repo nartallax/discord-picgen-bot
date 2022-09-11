@@ -72,8 +72,15 @@ export class StaticFormatter extends Formatter {
 		return this.format(this.t.pause?.reply, this.makeCommandParams(cmd))
 	}
 
-	unpauseReply(cmd: CommandPropsShort): string | undefined {
-		return this.format(this.t.unpause?.reply, this.makeCommandParams(cmd))
+	unpauseReply(cmd: CommandPropsShort, task: GenTask): string | undefined {
+		return this.format(this.t.unpause?.reply, {
+			...this.makeCommandParams(cmd),
+			...this.makeTaskParams(task)
+		})
+	}
+
+	unpauseReplyNoTask(cmd: CommandPropsShort): string | undefined {
+		return this.format(this.t.unpause?.replyNoTask, this.makeCommandParams(cmd))
 	}
 
 	statusTasksUnshown(cmd: CommandPropsShort, unshownCount: number): string | undefined {

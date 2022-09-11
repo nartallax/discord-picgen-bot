@@ -1,8 +1,19 @@
 import {createAppContext} from "context"
 import {promises as Fs} from "fs"
 import {Config} from "types"
+import {errToString} from "utils"
 
 export async function main(): Promise<void> {
+
+	process.on("uncaughtException", err => {
+		console.error("Uncaught exception! " + err.stack)
+	})
+
+	process.on("unhandledRejection", err => {
+		console.error("Uncaught exception! " + errToString(err))
+	})
+
+
 	try {
 		const token = (await Fs.readFile("./token.txt", "utf-8")).replace(/[\s\n\r\t]/g, "")
 		const config: Config = JSON.parse(await Fs.readFile("./config.json", "utf-8"))

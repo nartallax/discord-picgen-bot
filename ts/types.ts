@@ -96,6 +96,7 @@ export interface Config {
 		unpause: {
 			description: string
 			reply: string
+			replyNoTask: string
 		}
 		errors: {
 			cannotResolveGuild: string
