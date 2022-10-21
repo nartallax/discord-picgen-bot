@@ -3,6 +3,7 @@ import {AppContext} from "context"
 import {httpGet} from "http_utils"
 import {GenTaskInputWithoutId} from "last_command_repo"
 import {GenParamDescription, GenParamValue, GenParamValuesObject, GenTaskInput, CommandMessageProperties, GenerationCommandDescription} from "types"
+import * as ShellQuote from "shell-quote"
 
 export class InputParser {
 	private genParams: ReadonlyMap<string, GenParamDescription>
@@ -61,8 +62,24 @@ export class InputParser {
 		return [prompt, droppedCount]
 	}
 
+	// one logic for separating prompt from parameters
+	// another logic (shellquoting) is for parsing parameters
+	// that's why this method exists
+	private reparseParams(str: readonly string[]): string[] {
+		const parseResult = ShellQuote.parse(str.join(" "))
+		const result = [] as string[]
+		for(const part of parseResult){
+			if(typeof(part) !== "string"){
+				console.error("Unparseable: ", parseResult)
+				throw new BotError("Cannot parse params: unexpected expressions found.")
+			}
+			result.push(part)
+		}
+		return result
+	}
+
 	private split(paramStr: string): {prompt: string, paramsArr: readonly string[]} {
-		const rawParamParts = paramStr.split(/\s+/)
+		const rawParamParts = paramStr.split(/\s/)
 		const firstKeyIndex = rawParamParts.findIndex(part => this.genParams.has(part))
 		let promptParts: string[], paramParts: string[]
 		if(firstKeyIndex < 0){
@@ -70,7 +87,7 @@ export class InputParser {
 			paramParts = []
 		} else {
 			promptParts = rawParamParts.slice(0, firstKeyIndex)
-			paramParts = rawParamParts.slice(firstKeyIndex)
+			paramParts = this.reparseParams(rawParamParts.slice(firstKeyIndex))
 		}
 
 		return {prompt: promptParts.join(" "), paramsArr: paramParts}

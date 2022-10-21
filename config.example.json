@@ -132,6 +132,13 @@
 				"default": 80,
 				"humanName": "ASCII cols",
 				"description": "if ascii, number of text columns"
+			}, {
+				"key": ["--negative", "-not"],
+				"jsonName": "negativePrompt",
+				"type": "string",
+				"default": "",
+				"humanName": "Negative prompt",
+				"description": "prompt that is not so positive"
 			}]
 		},
 		"dreamhelp": {

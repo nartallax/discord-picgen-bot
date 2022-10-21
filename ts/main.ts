@@ -6,7 +6,7 @@ import {errToString} from "utils"
 export async function main(): Promise<void> {
 
 	process.on("uncaughtException", err => {
-		console.error("Uncaught exception! " + err.stack)
+		console.error("Uncaught exception!" + err.stack)
 	})
 
 	process.on("unhandledRejection", err => {
