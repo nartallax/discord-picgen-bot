@@ -10,6 +10,7 @@ export type CommandOptionsObject<P extends string = string> = {readonly [key in 
 
 export interface CommandMessageProperties<P extends string = string> {
 	readonly channelId: string
+	readonly messageId: string
 	readonly userId: string
 	readonly command: string
 	readonly options: CommandOptionsObject<P>

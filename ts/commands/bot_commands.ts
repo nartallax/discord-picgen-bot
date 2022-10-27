@@ -33,6 +33,7 @@ export const displayQueueReact: MessageReacts = {
 		await context.bot.runCommand({
 			roleName: context.bot.getRoleName(reaction.reactUserId),
 			channelId: reaction.channelId,
+			messageId: reaction.messageId,
 			command: "status",
 			options: {},
 			userId: reaction.reactUserId
@@ -84,9 +85,11 @@ export const repeatReact: MessageReacts = {
 	"🔁": async(context, reaction) => {
 		await context.bot.runCommand({
 			roleName: context.bot.getRoleName(reaction.reactUserId),
+			attachments: await context.bot.parseAttachments(reaction.commandMessage.channelId, reaction.commandMessage.messageId),
 			command: reaction.commandMessage.command,
 			options: reaction.commandMessage.options,
 			channelId: reaction.channelId,
+			messageId: reaction.messageId,
 			userId: reaction.reactUserId
 		})
 	}
@@ -127,6 +130,7 @@ const defaultCommands: CommandMap = {
 					command: "lenny",
 					options: {},
 					channelId: reaction.channelId,
+					messageId: reaction.messageId,
 					userId: reaction.reactUserId
 				})
 			}
@@ -185,6 +189,7 @@ const defaultCommands: CommandMap = {
 					command: "kill",
 					options: {},
 					channelId: reaction.channelId,
+					messageId: reaction.messageId,
 					userId: reaction.reactUserId
 				})
 			},
@@ -194,6 +199,7 @@ const defaultCommands: CommandMap = {
 					command: "purge",
 					options: {},
 					channelId: reaction.channelId,
+					messageId: reaction.messageId,
 					userId: reaction.reactUserId
 				})
 			},
@@ -203,6 +209,7 @@ const defaultCommands: CommandMap = {
 					command: "clear",
 					options: {},
 					channelId: reaction.channelId,
+					messageId: reaction.messageId,
 					userId: reaction.reactUserId
 				})
 			},

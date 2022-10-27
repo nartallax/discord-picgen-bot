@@ -285,16 +285,11 @@ export class Bot {
 			}
 		}
 
-		const attachments = [] as MessageAttachment[]
-		for(const attachment of message.attachments.values()){
-			attachments.push({
-				url: attachment.url,
-				contentType: attachment.contentType
-			})
-		}
+		const attachments = this.parseMessageAttachments(message)
 
 		await this.runCommand({
 			channelId: message.channelId,
+			messageId: message.id,
 			command: commandName,
 			options: opts,
 			userId: message.author.id,
@@ -302,6 +297,21 @@ export class Bot {
 			creationTime: message.createdTimestamp,
 			roleName: this.getRoleName(message.author.id)
 		})
+	}
+
+	async parseAttachments(channelId: string, messageId: string): Promise<MessageAttachment[]> {
+		return this.parseMessageAttachments(await this.fetchMessage(channelId, messageId))
+	}
+
+	private parseMessageAttachments(message: Discord.Message): MessageAttachment[] {
+		const attachments = [] as MessageAttachment[]
+		for(const attachment of message.attachments.values()){
+			attachments.push({
+				url: attachment.url,
+				contentType: attachment.contentType
+			})
+		}
+		return attachments
 	}
 
 	private async processInteraction(interaction: DefaultInteraction): Promise<void> {
@@ -316,6 +326,7 @@ export class Bot {
 
 		await this.runCommand({
 			channelId: interaction.channelId,
+			messageId: interaction.id,
 			command: interaction.commandName,
 			options: opts,
 			userId: interaction.user.id,
@@ -409,6 +420,15 @@ export class Bot {
 	private getMessage(channelID: string, messageID: string): Discord.Message | undefined {
 		const channel = this.getTextChannel(channelID)
 		return channel.messages.cache.get(messageID)
+	}
+
+	private async fetchMessage(channelID: string, messageID: string): Promise<Discord.Message> {
+		const cacheMessage = this.getMessage(channelID, messageID)
+		if(cacheMessage){
+			return cacheMessage
+		}
+		const channel = this.getTextChannel(channelID)
+		return await channel.messages.fetch(messageID)
 	}
 
 	async deleteMessage(channelID: string, messageID: string): Promise<void> {

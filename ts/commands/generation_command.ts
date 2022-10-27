@@ -30,6 +30,7 @@ export function makeGenerationCommand(context: AppContext, commandName: string, 
 						command: "drop",
 						options: {task_id: taskId},
 						channelId: reaction.channelId,
+						messageId: reaction.messageId,
 						userId: reaction.reactUserId
 					})
 				}
