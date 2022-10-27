@@ -88,7 +88,10 @@ export abstract class Formatter {
 			if(!def){
 				return null
 			}
-			const value = task.params[name] + ""
+			let value = task.params[name] + ""
+			if(value.includes(" ")){
+				value = JSON.stringify(value)
+			}
 			return (def.humanName || def.jsonName) + ": " + value
 		}).filter(x => !!x).join("\n")
 		return result
@@ -99,7 +102,11 @@ export abstract class Formatter {
 			if(value === true){
 				return key
 			} else {
-				return key + " " + value
+				let str = value + ""
+				if(str.includes(" ")){
+					str = JSON.stringify(str)
+				}
+				return key + " " + str
 			}
 		}).join("\n")
 	}
